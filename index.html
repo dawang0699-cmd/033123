@@ -1,0 +1,1426 @@
+<!doctype html>
+<!-- 中文備註：主畫面結構檔。POS 系統主頁面，包含點餐、訂單查詢、報表、商品管理、設定五大頁面。 -->
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>餐廳 POS V20260602 列印橋接版</title>
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="stylesheet" href="styles/base.css" />
+  <link rel="stylesheet" href="styles/layout.css" />
+  <link rel="stylesheet" href="styles/pos.css" />
+  <link rel="stylesheet" href="styles/orders.css" />
+  <link rel="stylesheet" href="styles/reports.css" />
+  <link rel="stylesheet" href="styles/products.css" />
+  <link rel="stylesheet" href="styles/settings.css" />
+</head>
+<body>
+<div id="app">
+  <!-- ===== 側邊導覽列 ===== -->
+  <aside class="sidebar">
+    <div class="brand">餐廳 POS V2.1.23 接單自動印單通知版</div>
+    <button class="nav-btn active" data-view="posView">點餐</button>
+    <button class="nav-btn" data-view="ordersView">訂單查詢</button>
+    <button class="nav-btn" data-view="reportsView">報表</button>
+    <button class="nav-btn" data-view="productsView">商品管理</button>
+    <button class="nav-btn" data-view="settingsView">設定</button>
+    <button id="openCashDrawerBtn" class="nav-btn" 
+      style="background:#fef3c7;color:#92400e">💰 開啟錢箱</button>
+    <button id="installBtn" class="secondary-btn hidden">安裝到桌面</button>
+
+  </aside>
+
+  <main class="main">
+    <!-- ===== 點餐頁 ===== -->
+      <section id="posView" class="view active" style="position:relative">
+          <!-- ===== POS 未開班遮罩（僅遮罩 POS 頁）===== -->
+  <div id="posLockOverlay" style="display:none;position:absolute;inset:0;background:rgba(15,23,42,0.7);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
+    <div style="background:#fff;border-radius:14px;padding:30px;max-width:380px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.3)">
+      <div style="font-size:48px;margin-bottom:8px">🔒</div>
+      <h2 style="margin:0 0 10px;color:#0f172a">尚未開始值班</h2>
+      <p style="color:#64748b;font-size:14px;margin:0 0 16px">請先到報表頁開始值班，才能進行點餐與結帳。<br>線上點餐、商品管理、訂單查詢、設定均可正常使用。</p>
+      <button id="goToReportsBtn" class="primary-btn" style="background:#10b981;width:100%;padding:12px">📊 前往報表頁開班</button>
+    </div>
+  </div>
+
+      <header class="topbar pos-topbar">
+                <div class="pos-topbar-row">
+          <h1>點餐</h1>
+         <select id="orderType" style="width:100px">
+  <option value="內用">內用</option>
+  <option value="外帶">外帶</option>
+  <option value="桌號">桌號</option>
+  <option value="預約">預約</option>
+  <option value="線上點餐">線上點餐</option>
+</select>
+
+          <input id="tableNo" placeholder="桌號 / 取餐號" style="width:130px">
+          <select id="posReservationSlot" style="width:160px;display:none">
+            <option value="">請選擇預約時段</option>
+          </select>
+
+          <button id="cartModalBtn" class="secondary-btn">🛒 <span id="cartBadge">0</span></button>
+          <button id="checkoutBtn" class="primary-btn">結帳</button>
+                            <button id="discountAmountBtn" class="secondary-btn" style="background:#fef2f2;color:#ef4444">折扣$</button>
+          <button id="discountPercentBtn" class="secondary-btn" style="background:#fef2f2;color:#ef4444">折扣%</button>
+
+        </div>
+      </header>
+      <div class="pos-layout">
+        <section>
+          <div class="toolbar stack">
+            <input id="productSearch" placeholder="搜尋商品">
+            <div id="categoryTabs" class="category-tabs"></div>
+          </div>
+          <div id="productGrid" class="product-grid"></div>
+        </section>
+        <section class="pos-cart-panel">
+          <div class="row between wrap">
+            <h2 style="margin:0">購物車</h2>
+            <button id="clearCartBtn" class="danger-btn small-btn">清空</button>
+          </div>
+          <div id="cartList" class="cart-list empty">尚未加入商品</div>
+          <div class="cart-summary">
+            <div class="row between"><span>小計</span><strong id="subtotalText">$0</strong></div>
+            <div class="row between" style="font-size:18px;margin-top:6px"><span>合計</span><strong id="totalText">$0</strong></div>
+          </div>
+        </section>
+      </div>
+  
+      <!-- 購物車浮動視窗（手機用） -->
+      <div id="cartModal" class="cart-modal-backdrop" style="display:none">
+        <div class="cart-modal">
+          <div class="row between wrap" style="margin-bottom:12px">
+            <h2>購物車</h2>
+            <button id="closeCartModal" class="ghost-btn">✕</button>
+          </div>
+          <div id="cartListModal" class="cart-list empty">尚未加入商品</div>
+          <div class="cart-summary">
+            <div class="row between"><span>小計</span><strong id="subtotalTextModal">$0</strong></div>
+           <div class="row between" style="font-size:18px"><span>合計</span><strong id="totalTextModal">$0</strong></div>
+          </div>
+          <button id="checkoutBtnModal" class="primary-btn full" style="margin-top:12px">結帳</button>
+          <button id="clearCartBtnModal" class="danger-btn full" style="margin-top:6px">清空購物車</button>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 訂單查詢頁 ===== -->
+    <section id="ordersView" class="view">
+      <header class="topbar">
+        <h1>訂單查詢</h1>
+        <div class="topbar-actions responsive-filters synced-filters">
+          <input id="orderItemSearch" placeholder="品項搜尋">
+          <input id="orderDateFrom" type="date">
+          <input id="orderDateTo" type="date">
+          <input id="orderMinAmount" type="number" min="0" placeholder="最低金額">
+          <input id="orderMaxAmount" type="number" min="0" placeholder="最高金額">
+          <select id="orderPaymentMethodFilter">
+            <option value="">全部付款方式</option>
+            <option value="現金">現金</option>
+            <option value="刷卡">刷卡</option>
+            <option value="Line Pay">Line Pay</option>
+            <option value="其他">其他</option>
+            <option value="待付款">待付款</option>
+          </select>
+          <button id="clearOrderFiltersBtn" class="secondary-btn">清除篩選</button>
+        </div>
+      </header>
+      <div class="content-grid one">
+        <section class="card page-block">
+          <h2>線上待確認</h2>
+          <div id="incomingOnlineOrdersList" class="stack"></div>
+        </section>
+        <section class="card page-block">
+          <h2>待付款</h2>
+          <div id="pendingOrdersList" class="stack"></div>
+        </section>
+        <section class="card page-block">
+          <h2>已完成</h2>
+          <div id="completedOrdersList" class="stack"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ===== 報表頁（v2.1.26 班次主導）===== -->
+<section id="reportsView" class="view">
+  <header class="topbar">
+    <h1>報表</h1>
+    <div class="topbar-actions" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="openHistorySessionsBtn" class="secondary-btn">📋 歷史紀錄</button>
+      <button id="reportExportBtn" class="secondary-btn">📥 匯出 Excel</button>
+      <button id="costManageBtn" class="secondary-btn">💰 成本管理</button>
+    </div>
+  </header>
+
+
+  <!-- 班次狀態列 -->
+  <div id="sessionStatusBar" style="margin:10px 0;padding:14px;border-radius:10px;background:#f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+    <div id="sessionStatusText" style="font-size:15px">載入中…</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="startSessionBtn" class="primary-btn" style="background:#10b981;display:none">🟢 開始值班</button>
+      <button id="endSessionBtn" class="primary-btn" style="background:#ef4444;display:none">🔴 結束值班</button>
+    </div>
+  </div>
+
+  <!-- 當班即時數據 -->
+  <div id="currentSessionPanel" style="display:none">
+    <div id="reportCards" class="stat-grid"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
+      <div class="card stack">
+        <h3 style="margin:0 0 8px">🍱 訂單類型</h3>
+        <div id="orderTypeStats"></div>
+      </div>
+      <div class="card stack">
+        <h3 style="margin:0 0 8px">💳 付款方式</h3>
+        <div id="paymentStats"></div>
+      </div>
+    </div>
+
+    <div class="card stack" style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:0">🔥 熱銷 TOP10</h3>
+        <button id="toggleTopProductsBtn" class="ghost-btn" style="font-size:13px">詳細 ▾</button>
+      </div>
+      <div id="topProducts"></div>
+    </div>
+
+    <div class="card stack" style="margin-top:14px">
+      <h3 style="margin:0 0 8px">🕐 時段分布</h3>
+      <div id="hourAnalysis"></div>
+    </div>
+
+    
+  </div>
+</section>
+
+      <!-- ===== 商品管理頁 ===== -->
+<section id="productsView" class="view">
+  <!-- 頂部工具列：兩行（搜尋 / 動作按鈕） -->
+  <div class="products-topbar-v2">
+    <div class="products-topbar-row1">
+      <input type="search" id="productSearchTop" class="input" placeholder="搜尋商品名稱…">
+    </div>
+    <div class="products-topbar-row2">
+      <button id="openCategoryListBtn" class="btn">分類</button>
+      <button id="openModuleListBtn" class="btn">模組</button>
+      <button id="addProductBtnTop" class="btn primary">新增</button>
+      <button id="openPendingBtn" class="btn">待上架(<span id="pendingCountLabel">0</span>)</button>
+      <button id="excelTemplateBtn" class="btn">範本</button>
+      <label class="btn" for="excelImportInput" style="cursor:pointer">匯入</label>
+      <input type="file" id="excelImportInput" accept=".xlsx,.xls" hidden>
+      <button id="excelExportBtn" class="btn">📤 匯出</button>
+      <button id="syncMenuBtnProducts" class="btn primary">⬆ 上傳</button>
+      <button id="fetchMenuBtnProducts" class="btn">⬇ 讀取</button>
+
+    </div>
+  </div>
+
+  <!-- 主畫面：單欄商品列表 -->
+  <div class="products-main">
+      <div class="panel-block">
+      <div class="panel-head" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0">商品列表</h3>
+        <span id="productCountLabel" class="muted"></span>
+        <span style="flex:1"></span>
+        <div id="productListViewToggle" style="display:flex;gap:4px">
+          <button type="button" id="productListViewCardBtn" class="btn small" title="圖示模式" style="padding:4px 10px">🔲 圖示</button>
+          <button type="button" id="productListViewTextBtn" class="btn small" title="純文字模式" style="padding:4px 10px">📃 文字</button>
+        </div>
+      </div>
+      <div id="productTable" class="product-table"></div>
+    </div>
+
+  </div>
+
+  <!-- 隱藏占位：保留舊 ID 給其他模組相容（不顯示） -->
+  <div style="display:none">
+    <div id="categoryList"></div>
+    <div id="moduleLibrary"></div>
+    <div id="pendingMenuPanel" hidden>
+      <button id="applyPendingMenuBtn"></button>
+      <button id="discardPendingMenuBtn"></button>
+      <div id="pendingMenuList"></div>
+    </div>
+    <button id="addCategoryBtn"></button>
+    <button id="addModuleBtn"></button>
+  </div>
+
+  <!-- 商品編輯浮窗 -->
+  <div id="productEditModal" class="product-modal-backdrop" style="display:none">
+    <div class="product-modal">
+      <h3 id="productEditModalTitle">新增商品</h3>
+      <form id="productForm" class="form-grid">
+        <input type="hidden" id="productId">
+        <div class="form-row">
+          <label>商品名稱</label>
+          <input id="productName" required>
+          <div id="productNameError" class="field-error hidden">請輸入商品名稱</div>
+        </div>
+                <div class="form-row">
+          <label>價格</label>
+          <input id="productPrice" type="number" min="0" required>
+          <div id="productPriceError" class="field-error hidden">請輸入正確商品價格</div>
+        </div>
+        <div class="form-row">
+          <label>SKU 商品編號（不可重複，圖片透過 SKU 自動對應）</label>
+          <input id="productSku" placeholder="例：A001" maxlength="32">
+          <div id="productSkuError" class="field-error hidden">SKU 重複，請改其他編號</div>
+        </div>
+        <div class="form-row">
+          <label>商品說明（顯示在顧客點餐頁，最多 60 字，可留空）</label>
+          <input id="productDescription" maxlength="60" placeholder="例如：現點現炸酥脆美味">
+        </div>
+
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-row">
+            <label>分類</label>
+            <select id="productCategory"></select>
+          </div>
+          <div class="form-row">
+            <label>狀態</label>
+            <select id="productEnabled">
+              <option value="true">啟用</option>
+              <option value="false">停用</option>
+            </select>
+          </div>
+        </div>
+                        <div class="form-row image-row">
+          <label>商品圖片（由 SKU 自動對應，請先到設定 → 匯入 SKU 對應表）</label>
+          <input id="productImageData" type="hidden">
+          <div id="productImagePreview" class="product-image-preview muted">尚未對應圖片</div>
+          <div id="productImageStatus" class="muted" style="font-size:12px;margin-top:4px"></div>
+        </div>
+
+
+        <div class="form-row">
+          <label>已套用模組</label>
+          <div class="row gap wrap" style="margin-bottom:6px">
+            <select id="moduleSelect" style="flex:1"></select>
+            <button type="button" id="attachModuleBtn" class="secondary-btn small-btn">加入</button>
+          </div>
+          <div id="productModulesEditor"></div>
+        </div>
+                <div class="form-actions">
+          <button type="submit" class="primary-btn" style="background:#2563eb;color:#fff">保存商品</button>
+          <button type="button" id="deleteProductBtn" class="danger-btn" style="background:#fecaca;color:#b91c1c">刪除</button>
+          <button type="button" id="closeProductEditModal" style="background:#e5e7eb;color:#374151">取消</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+ 
+</section>
+
+
+    <!-- ===== 設定頁 ===== -->
+<section id="settingsView" class="view">
+  <header class="topbar">
+    <h1>設定</h1>
+  </header>
+  <div class="settings-btn-grid">
+    <div class="setting-tile" data-modal="modalPrint">
+      <span class="tile-icon">🖨️</span>
+      <span class="tile-label">列印設定</span>
+      <span class="tile-desc">店名、紙寬、字體、自動列印</span>
+    </div>
+    <div class="setting-tile" data-modal="modalSunmi">
+      <span class="tile-icon">📠</span>
+      <span class="tile-label">Sunmi 印表機</span>
+      <span class="tile-desc">內建印表機測試與控制</span>
+    </div>
+    <div class="setting-tile" data-modal="modalBluetooth">
+      <span class="tile-icon">📶</span>
+      <span class="tile-label">藍牙印表機</span>
+      <span class="tile-desc">連線、測試廚房出單機</span>
+    </div>
+    <div class="setting-tile" data-modal="modalNetwork">
+      <span class="tile-icon">🌐</span>
+      <span class="tile-label">網路印表機</span>
+      <span class="tile-desc">WiFi / LAN 印表機連線</span>
+    </div>
+    <div class="setting-tile" data-modal="modalRealtime">
+      <span class="tile-icon">⚡</span>
+      <span class="tile-label">即時接單</span>
+      <span class="tile-desc">Firebase 線上點餐設定</span>
+    </div>
+       <div class="setting-tile" data-modal="modalGoogle">
+      <span class="tile-icon">🎯</span>
+      <span class="tile-label">會員點數查詢</span>
+      <span class="tile-desc">輸入電話查詢點數餘額與紀錄</span>
+    </div>
+    <div class="setting-tile" data-modal="modalLocalData">
+      <span class="tile-icon">💾</span>
+      <span class="tile-label">本機資料</span>
+      <span class="tile-desc">匯出、匯入、重建資料</span>
+    </div>
+    <div class="setting-tile" data-modal="modalSound">
+      <span class="tile-icon">🔔</span>
+      <span class="tile-label">進單提示音</span>
+      <span class="tile-desc">自訂線上訂單提示音效</span>
+    </div>
+      <div class="setting-tile" data-modal="modalBusinessHours">
+      <span class="tile-icon">🕐</span>
+      <span class="tile-label">營業時間</span>
+      <span class="tile-desc">每日營業時段，預約功能依據</span>
+    </div>
+    <div class="setting-tile" data-modal="modalImageLibrary">
+      <span class="tile-icon">📥</span>
+      <span class="tile-label">SKU 圖庫對應</span>
+      <span class="tile-desc">匯入 gallery.html 下載的 SKU 對應表</span>
+    </div>
+        <div class="setting-tile" data-promo-open="1">
+      <span class="tile-icon">🎁</span>
+      <span class="tile-label">廣告促銷管理</span>
+      <span class="tile-desc">Banner、優惠碼、線上點餐促銷</span>
+    </div>
+  
+      <div class="setting-tile" data-customer-display-open="1">
+      <span class="tile-icon">🖥️</span>
+      <span class="tile-label">客顯設定</span>
+      <span class="tile-desc">顧客螢幕顯示購物車與付款資訊</span>
+    </div>
+</div>
+</section>
+
+
+<!-- ===== 列印設定 Modal ===== -->
+<div id="modalPrint" class="settings-modal-backdrop">
+  <div class="settings-modal" style="max-width:640px">
+    <div class="settings-modal-header">
+      <h3>🖨️ 列印設定</h3>
+      <button class="close-modal-btn" data-close-modal="modalPrint">✕</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="sm-section-title">基本資訊</div>
+      <div class="sm-form-group"><label>店名</label><input id="printStoreName"></div>
+      <div class="sm-form-group"><label>電話</label><input id="printStorePhone"></div>
+      <div class="sm-form-group"><label>地址</label><input id="printStoreAddress"></div>
+      <div class="sm-form-group"><label>收據備註</label><input id="printReceiptFooter"></div>
+
+      <div class="sm-section-title">紙張與字體</div>
+      <div class="sm-form-group"><label>顧客單紙寬</label>
+        <select id="printReceiptPaperWidth">
+          <option value="58">58mm</option>
+          <option value="80">80mm</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="sm-form-group"><label>標籤寬(mm)</label><input id="printLabelPaperWidth" type="number" min="30" max="120"></div>
+        <div class="sm-form-group"><label>標籤高(mm)</label><input id="printLabelPaperHeight" type="number" min="20" max="120"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="sm-form-group"><label>顧客單字體大小</label><input id="printReceiptFontSize" type="number" min="8" max="24"></div>
+        <div class="sm-form-group"><label>標籤字體大小</label><input id="printLabelFontSize" type="number" min="8" max="24"></div>
+      </div>
+
+      <div class="sm-section-title">位移調整</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="sm-form-group"><label>顧客單水平位移(mm)</label><input id="printReceiptOffsetX" type="number" step="0.5"></div>
+        <div class="sm-form-group"><label>顧客單垂直位移(mm)</label><input id="printReceiptOffsetY" type="number" step="0.5"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="sm-form-group"><label>標籤水平位移(mm)</label><input id="printLabelOffsetX" type="number" step="0.5"></div>
+        <div class="sm-form-group"><label>標籤垂直位移(mm)</label><input id="printLabelOffsetY" type="number" step="0.5"></div>
+      </div>
+
+            <div class="sm-section-title">廚房單字級（品名 / 選項分開設定）</div>
+      <div class="sm-info-box" style="font-size:12px;color:#64748b;margin-bottom:8px">
+        藍牙印表機字級為階梯式：24=正常、32=放大2倍、48=放大3倍。內建 Sunmi 則依數值縮放。
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="sm-form-group"><label>廚房單品名字級</label><input id="printFontKitchenItem" type="number" min="24" max="60" step="1"></div>
+        <div class="sm-form-group"><label>廚房單選項字級</label><input id="printFontKitchenInfo" type="number" min="24" max="60" step="1"></div>
+      </div>
+
+      <div class="sm-section-title">自動列印</div>
+      <div class="sm-form-group"><label>廚房單列印份數</label><input id="printKitchenCopies" type="number" min="1" max="5"></div>
+
+      <div class="sm-check-row"><input id="printAutoCheckout" type="checkbox"><span>結帳後自動列印顧客單</span></div>
+            <div class="sm-check-row"><input id="printAutoKitchen" type="checkbox"><span>點餐結帳或待付款時自動列印廚房單</span></div>
+
+      <div class="sm-section-title">指定印表機（每種單別各自選擇）</div>
+      <div class="sm-info-box" style="font-size:12px;color:#64748b;margin-bottom:8px">
+        預設「自動」＝依序嘗試內建→藍牙→網路（目前 T2 行為不變）。日後不用 T2，可把廚房單改成「藍牙」。
+      </div>
+      <div class="sm-form-group"><label>顧客單印表機</label>
+        <select id="printRouteReceipt">
+          <option value="auto">自動（內建→藍牙→網路）</option>
+          <option value="sunmi">內建 Sunmi</option>
+          <option value="bluetooth">藍牙</option>
+          <option value="network">網路</option>
+        </select>
+      </div>
+      <div class="sm-form-group"><label>廚房單印表機</label>
+        <select id="printRouteKitchen">
+          <option value="auto">自動（內建→藍牙→網路）</option>
+          <option value="sunmi">內建 Sunmi</option>
+          <option value="bluetooth">藍牙</option>
+          <option value="network">網路</option>
+        </select>
+      </div>
+      <div class="sm-form-group"><label>標籤印表機</label>
+        <select id="printRouteLabel">
+          <option value="auto">自動（內建→藍牙→網路）</option>
+          <option value="sunmi">內建 Sunmi</option>
+          <option value="bluetooth">藍牙</option>
+          <option value="network">網路</option>
+        </select>
+      </div>
+
+      <div class="sm-section-title">列印欄位（顧客單 / 廚房單 / 標籤 各自勾選）</div>
+      <div class="sm-info-box" style="font-size:12px;color:#64748b;margin-bottom:8px">
+        每個欄位有三個勾：左 = 顧客單，中 = 廚房單，右 = 標籤。儲存後套用到全系統列印（訂單查詢、結帳、線上接單）。
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#f1f5f9;text-align:center">
+              <th style="text-align:left;padding:6px 8px">欄位</th>
+              <th style="padding:6px 4px;width:48px">顧客單</th>
+              <th style="padding:6px 4px;width:48px">廚房單</th>
+              <th style="padding:6px 4px;width:48px">標籤</th>
+            </tr>
+          </thead>
+          <tbody id="printFieldsMatrixBody">
+            <!-- 由 settings-page.js 動態產生 -->
+          </tbody>
+        </table>
+      </div>
+
+
+      <div class="sm-section-title">預覽</div>
+      <div class="sm-btn-row">
+        <button id="previewReceiptPrintBtn" class="sm-btn">預覽顧客單</button>
+        <button id="previewKitchenPrintBtn" class="sm-btn">預覽廚房單</button>
+        <button id="previewLabelPrintBtn" class="sm-btn">預覽標籤</button>
+      </div>
+    </div>
+    <div class="settings-modal-footer">
+      <button id="savePrintSettingsBtn" class="sm-btn primary">儲存列印設定</button>
+      <button class="sm-btn" data-close-modal="modalPrint">關閉</button>
+    </div>
+  </div>
+</div>
+
+    <!-- ===== 營業時間 Modal ===== -->
+<div id="modalBusinessHours" class="settings-modal-backdrop">
+  <div class="settings-modal" style="max-width:680px">
+    <div class="settings-modal-header">
+      <h3>🕐 營業時間設定</h3>
+      <button class="close-modal-btn" data-close-modal="modalBusinessHours">✕</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="sm-info-box" style="margin-bottom:14px;font-size:13px;color:#475569">
+        每日最多可設 4 個時段，跨日請設結束時間小於開始時間（例：22:00 → 02:00）。勾「公休」即停用該日，預約頁不顯示。
+      </div>
+      <div id="businessHoursBody"></div>
+    </div>
+    <div class="settings-modal-footer">
+      <button id="saveBusinessHoursBtn" class="sm-btn primary">儲存營業時間</button>
+           <button class="sm-btn" data-close-modal="modalBusinessHours">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SKU 圖庫對應 Modal ===== -->
+<div id="modalImageLibrary" class="settings-modal-backdrop">
+  <div class="settings-modal" style="max-width:680px">
+    <div class="settings-modal-header">
+      <h3>📥 SKU 圖庫對應</h3>
+      <button class="close-modal-btn" data-close-modal="modalImageLibrary">✕</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="sm-info-box" style="font-size:13px;color:#475569;margin-bottom:12px">
+        步驟：1) 打開 <a href="https://jess0937588151-hue.github.io/2234/images/products/gallery.html" target="_blank" rel="noopener">圖庫工具</a> 為每張圖片輸入 SKU → 2) 下載 JSON → 3) 在下方匯入。匯入後商品只要 SKU 相同，就會自動套用圖片 URL。
+      </div>
+
+            <div class="sm-section-title">圖庫網址（GitHub Pages）</div>
+      <div class="sm-form-group">
+        <label>Base URL</label>
+        <input id="imageLibraryBaseUrl" placeholder="https://jess0937588151-hue.github.io/2234/images/products/">
+      </div>
+      <div class="sm-btn-row" style="margin-top:-4px;margin-bottom:10px">
+        <button type="button" class="sm-btn" onclick="window.open('https://jess0937588151-hue.github.io/2234/images/products/gallery.html','_blank','noopener')">🛠 開啟圖庫對應工具</button>
+      </div>
+
+
+      <div class="sm-section-title">匯入 SKU 對應表</div>
+      <div class="sm-btn-row">
+        <input id="imageLibraryFileInput" type="file" accept="application/json,.json" style="flex:1">
+        <button id="imageLibraryImportBtn" class="sm-btn primary">匯入並合併</button>
+        <button id="imageLibraryReplaceBtn" class="sm-btn danger">匯入並覆蓋</button>
+      </div>
+      <div id="imageLibraryImportStatus" class="sm-info-box" style="margin-top:10px;font-size:13px">尚未匯入</div>
+
+      <div class="sm-section-title">目前對應表</div>
+      <div id="imageLibraryListBox" style="max-height:280px;overflow:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;font-size:13px;background:#f8fafc">
+        （尚無資料）
+      </div>
+      <div class="sm-btn-row" style="margin-top:8px">
+        <button id="imageLibraryClearBtn" class="sm-btn danger">清空對應表</button>
+        <button id="imageLibraryExportBtn" class="sm-btn">匯出目前對應表</button>
+      </div>
+    </div>
+    <div class="settings-modal-footer">
+      <button id="saveImageLibraryBtn" class="sm-btn primary">儲存設定</button>
+      <button class="sm-btn" data-close-modal="modalImageLibrary">關閉</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== Sunmi 印表機 Modal ===== -->
+
+<div id="modalSunmi" class="settings-modal-backdrop">
+  <div class="settings-modal">
+    <div class="settings-modal-header">
+      <h3>📠 Sunmi 內建印表機</h3>
+      <button class="close-modal-btn" data-close-modal="modalSunmi">✕</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="sm-section-title">印表機狀態</div>
+      <div id="sunmiStatusBox" class="sm-info-box">偵測中...</div>
+            <div id="bridgeModeBox_sunmi" style="margin-top:6px;font-size:13px"></div>
+      <button type="button" class="sm-btn" style="margin-top:8px" onclick="window.__bridgeTestPrint()">🖨 測試列印（彈系統對話框）</button>
+
+      <div class="sm-section-title">測試功能</div>
+
+      <div class="sm-btn-row">
+        <button id="sunmiTestPrintBtn" class="sm-btn">測試列印</button>
+        <button id="sunmiTestCutBtn" class="sm-btn">測試切紙</button>
+        <button id="sunmiTestDrawerBtn" class="sm-btn">測試錢箱</button>
+        <button id="sunmiTestBuzzerBtn" class="sm-btn">測試蜂鳴</button>
+        <button id="sunmiRefreshStatusBtn" class="sm-btn">刷新狀態</button>
+      </div>
+    </div>
+    <div class="settings-modal-footer">
+      <button class="sm-btn" data-close-modal="modalSunmi">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 藍牙印表機 Modal ===== -->
+<div id="modalBluetooth" class="settings-modal-backdrop">
+  <div class="settings-modal">
+    <div class="settings-modal-header">
+      <h3>📶 藍牙印表機</h3>
+      <button class="close-modal-btn" data-close-modal="modalBluetooth">✕</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="sm-section-title">連線狀態</div>
+      <div id="btStatusBox" class="sm-info-box">未連線</div>
+            <div id="bridgeModeBox_bt" style="margin-top:6px;font-size:13px"></div>
+      <button type="button" class="sm-btn" style="margin-top:8px" onclick="window.__bridgeTestPrint()">🖨 測試列印（彈系統對話框）</button>
+
+      <div class="sm-section-title">已配對裝置</div>
+
+      <div class="sm-form-group">
+        <select id="btDeviceSelect" style="width:100%">
+          <option value="">請先刷新裝置列表</option>
+        </select>
+      </div>
+      <div class="sm-btn-row">
+        <button id="btRefreshBtn" class="sm-btn">刷新裝置</button>
+        <button id="btConnectBtn" class="sm-btn primary">連線</button>
+        <button id="btDisconnectBtn" class="sm-btn danger">斷線</button>
+        <button id="btTestPrintBtn" class="sm-btn">測試列印</button>
+      </div>
+    </div>
+    <div class="settings-modal-footer">
+      <button class="sm-btn" data-close-modal="modalBluetooth">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 網路印表機 Modal ===== -->
+<div id="modalNetwork" class="settings-modal-backdrop">
+  <div class="settings-modal">
+    <div class="settings-modal-header">
+      <h3>🌐 網路印表機</h3>
+      <button class="close-modal-btn" data-close-modal="modalNetwork">✕</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="sm-section-title">連線狀態</div>
+      <div id="netStatusBox" class="sm-info-box">未連線</div>
+      <div id="bridgeModeBox_net" style="margin-top:6px;font-size:13px"></div>
+      <button type="button" class="sm-btn" onclick="window.__bridgeTestPrint()">🖨 測試列印（彈系統對話框）</button>
+
+      <div class="sm-section-title">連線設定</div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+        <div class="sm-form-group"><label>IP 位址</label><input id="netIpInput" placeholder="192.168.1.100"></div>
+        <div class="sm-form-group"><label>Port</label><input id="netPortInput" type="number" value="9100"></div>
+      </div>
+      <div class="sm-btn-row">
+        <button id="netConnectBtn" class="sm-btn primary">連線</button>
+        <button id="netDisconnectBtn" class="sm-btn danger">斷線</button>
+        <button id="netTestPrintBtn" class="sm-btn">測試列印</button>
+      </div>
+    </div>
+    <div class="settings-modal-footer">
+      <button class="sm-btn" data-close-modal="modalNetwork">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 即時接單 Modal ===== -->
+<div id="modalRealtime" class="settings-modal-backdrop">
+  <div class="settings-modal" style="max-width:640px">
+    <div class="settings-modal-header">
+      <h3>⚡ 即時接單設定</h3>
+      <button class="close-modal-btn" data-close-modal="modalRealtime">✕</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="sm-check-row"><input id="realtimeOrderEnabled" type="checkbox"><span>啟用 Firebase 即時接單</span></div>
+      <div class="sm-form-group"><label>裝置角色</label>
+        <select id="deviceRole">
+          <option value="master">主機（可編輯商品、同步菜單）</option>
+          <option value="slave">從機（僅讀取雲端菜單）</option>
+        </select>
+      </div>
+
+      <div class="sm-section-title">Firebase 設定</div>
+      <div class="sm-form-group"><label>API Key</label><input id="firebaseApiKey"></div>
+      <div class="sm-form-group"><label>Auth Domain</label><input id="firebaseAuthDomain"></div>
+      <div class="sm-form-group"><label>Realtime Database URL</label><input id="firebaseDatabaseUrl" placeholder="https://xxx-default-rtdb.firebaseio.com"></div>
+      <div class="sm-form-group"><label>Project ID</label><input id="firebaseProjectId"></div>
+      <div class="sm-form-group"><label>Storage Bucket</label><input id="firebaseStorageBucket"></div>
+      <div class="sm-form-group"><label>Messaging Sender ID</label><input id="firebaseMessagingSenderId"></div>
+      <div class="sm-form-group"><label>App ID</label><input id="firebaseAppId"></div>
+      <div class="sm-form-group"><label>Measurement ID（可選）</label><input id="firebaseMeasurementId"></div>
+
+      <div class="sm-section-title">線上點餐頁</div>
+      <div class="sm-form-group"><label>店名</label><input id="onlineStoreTitle"></div>
+      <div class="sm-form-group"><label>副標</label><input id="onlineStoreSubtitle"></div>
+      <div class="sm-check-row"><input id="onlineConfirmAutoPrintKitchen" type="checkbox"><span>確認後自動列印廚房單</span></div>
+      <div class="sm-check-row"><input id="onlineConfirmAutoPrintReceipt" type="checkbox"><span>確認後自動列印顧客單</span></div>
+      <div class="sm-check-row"><input id="onlineIncomingSoundEnabled" type="checkbox"><span>線上新單播放提醒聲</span></div>
+
+      <div class="sm-section-title">帳號與狀態</div>
+           <div class="sm-btn-row">
+        <button id="posGoogleLoginBtn" class="sm-btn primary">POS Google 登入</button>
+        <button id="posGoogleLogoutBtn" class="sm-btn">POS Google 登出</button>
+      </div>
+      <div class="sm-btn-row" style="margin-top:8px">
+        <button id="syncMenuBtn" class="sm-btn primary">⬆ 上傳菜單到雲端</button>
+        <button id="fetchMenuBtn" class="sm-btn">⬇ 從雲端讀取菜單</button>
+      </div>
+
+      <div id="posGoogleAccountBox" class="sm-info-box" style="margin-top:10px">POS 登入帳號：未登入</div>
+      <div id="realtimeOrderStatusBox" class="sm-info-box">同步狀態：無</div>
+    </div>
+    <div class="settings-modal-footer">
+      <button id="saveRealtimeOrderSettingsBtn" class="sm-btn primary">儲存即時接單設定</button>
+      <button class="sm-btn" data-close-modal="modalRealtime">關閉</button>
+    </div>
+  </div>
+</div>
+<!-- ===== 客顯設定 Modal（v20260525 新增） ===== -->
+<div id="customerDisplayModal" class="settings-modal-backdrop">
+  <div class="settings-modal" style="max-width:480px">
+    <div class="settings-modal-header">
+      <h3>🖥️ 客顯設定</h3>
+      <button class="close-modal-btn" data-close-modal="customerDisplayModal">✕</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="sm-info-box" style="font-size:13px;color:#475569;margin-bottom:14px">
+        客顯功能需搭配已更新的 Sunmi APK（v20260525+）。APK 會在 127.0.0.1:8081 啟動客顯 Server，購物車變動與付款完成時會自動推送畫面。
+      </div>
+
+      <div class="sm-check-row">
+        <input id="cdEnabled" type="checkbox">
+        <span>啟用客顯推送</span>
+      </div>
+      <div class="sm-form-group">
+        <label>客顯主機 IP</label>
+        <input id="cdHost" placeholder="POS 在另一台請填 T2 的區域 IP，例 192.168.1.101">
+      </div>
+
+      <div class="sm-section-title">連線設定</div>
+      <div class="sm-form-group">
+        <label>Port（預設 8081）</label>
+        <input id="cdPort" type="number" min="1024" max="65535" value="8081">
+      </div>
+
+            <div class="sm-section-title">待機畫面</div>
+      <div class="sm-form-group">
+        <label>待機訊息</label>
+        <input id="cdIdleMessage" type="text" maxlength="30" placeholder="歡迎光臨">
+      </div>
+
+      <div class="sm-section-title">輪播圖（最多 5 張）</div>
+      <div class="sm-form-group">
+        <label>輪播圖存放位置（結尾要有 /）</label>
+        <input id="cdSlidesBaseUrl" type="text" placeholder="https://lcym346-byte.github.io/2237-1/images/">
+      </div>
+      <div class="sm-form-group">
+        <label>圖片檔名（一格一張，例 slide1.jpg；留空略過）</label>
+        <input id="cdSlide1" type="text" placeholder="slide1.jpg" style="margin-bottom:6px">
+        <input id="cdSlide2" type="text" placeholder="slide2.jpg" style="margin-bottom:6px">
+        <input id="cdSlide3" type="text" placeholder="slide3.jpg" style="margin-bottom:6px">
+        <input id="cdSlide4" type="text" placeholder="slide4.jpg" style="margin-bottom:6px">
+        <input id="cdSlide5" type="text" placeholder="slide5.jpg">
+      </div>
+
+      <div class="sm-section-title">連線測試</div>
+
+      <div class="sm-btn-row">
+        <button id="cdPingBtn" class="sm-btn">🔍 偵測連線</button>
+      </div>
+    </div>
+    <div class="settings-modal-footer">
+      <button id="cdSaveBtn" class="sm-btn primary">儲存客顯設定</button>
+      <button class="sm-btn" data-close-modal="customerDisplayModal">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Google 備份 Modal ===== -->
+<div id="modalGoogle" class="settings-modal-backdrop">
+  <div class="settings-modal" style="max-width:640px">
+        <div class="settings-modal-header">
+      <h3>🎯 會員點數查詢</h3>
+      <button class="close-modal-btn" data-close-modal="modalGoogle">✕</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="sm-info-box" style="font-size:13px;color:#475569;margin-bottom:12px">
+        輸入顧客手機號碼，查詢目前點數餘額與最近交易紀錄。
+      </div>
+      <div class="sm-section-title">查詢</div>
+      <div class="sm-form-group">
+        <label>顧客手機號碼</label>
+        <input id="pointsQueryPhone" type="text" inputmode="none" readonly placeholder="點此用數字鍵盤輸入" style="cursor:pointer">
+      </div>
+      <div class="sm-btn-row">
+        <button id="pointsQueryBtn" class="sm-btn primary">查詢點數</button>
+      </div>
+      <div id="pointsQueryBalanceBox" class="sm-info-box" style="margin-top:10px">點數餘額：—</div>
+      <div class="sm-section-title">交易紀錄</div>
+      <div id="pointsQueryHistoryBox" style="max-height:280px;overflow:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;font-size:13px;background:#f8fafc">（尚未查詢）</div>
+    </div>
+
+    <div class="settings-modal-footer">
+      <button class="sm-btn" data-close-modal="modalGoogle">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 本機資料 Modal ===== -->
+<div id="modalLocalData" class="settings-modal-backdrop">
+  <div class="settings-modal">
+    <div class="settings-modal-header">
+      <h3>💾 本機資料</h3>
+      <button class="close-modal-btn" data-close-modal="modalLocalData">✕</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="sm-btn-row" style="flex-direction:column">
+        <button id="exportJsonBtn" class="sm-btn" style="width:100%">匯出本機 JSON</button>
+        <label class="sm-btn" style="width:100%;text-align:center;cursor:pointer;box-sizing:border-box">
+          匯入 JSON
+          <input id="importJsonInput" type="file" accept="application/json" hidden>
+        </label>
+        <button id="seedDemoBtn" class="sm-btn danger" style="width:100%">重建預設資料</button>
+      </div>
+      <div class="sm-divider"></div>
+      <div class="sm-check-row"><input id="showProductImagesToggle" type="checkbox"><span>點餐頁顯示商品圖片</span></div>
+    </div>
+    <div class="settings-modal-footer">
+      <button class="sm-btn" data-close-modal="modalLocalData">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 進單提示音 Modal ===== -->
+<div id="modalSound" class="settings-modal-backdrop">
+  <div class="settings-modal">
+    <div class="settings-modal-header">
+      <h3>🔔 自訂進單提示音</h3>
+      <button class="close-modal-btn" data-close-modal="modalSound">✕</button>
+    </div>
+    <div class="settings-modal-body">
+      <div id="customSoundStatusBox" class="sm-info-box">尚未上傳自訂音檔</div>
+      <input id="customSoundFileInput" type="file" accept="audio/*" hidden>
+      <div class="sm-btn-row" style="margin-top:12px">
+        <button id="uploadCustomSoundBtn" class="sm-btn primary">上傳音效</button>
+        <button id="previewCustomSoundBtn" class="sm-btn">試聽</button>
+        <button id="removeCustomSoundBtn" class="sm-btn danger">移除</button>
+      </div>
+      <div class="sm-info-box" style="margin-top:12px">支援 .mp3 .wav .m4a，500KB 以內。未上傳時使用預設提示音。</div>
+    </div>
+    <div class="settings-modal-footer">
+      <button class="sm-btn" data-close-modal="modalSound">關閉</button>
+    </div>
+  </div>
+</div>
+
+
+
+    
+<!-- ===== 支付方式 Modal ===== -->
+    <!-- ===== 商品設定 Modal（點餐用）===== -->
+<div id="productConfigModal" class="modal hidden">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog" style="max-width:480px">
+    <div class="row between wrap">
+      <h2 id="productConfigTitle">商品設定</h2>
+      <button id="closeProductConfigModal" class="ghost-btn">✕</button>
+    </div>
+    <div id="productConfigModules" style="margin-top:12px"></div>
+    <div style="margin-top:12px">
+      <label style="font-size:13px;font-weight:600;color:#475569">備註</label>
+      <input id="itemNoteInput" placeholder="例如：不要辣、去冰" style="width:100%;margin-top:4px;box-sizing:border-box">
+    </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+      <label style="font-size:13px;font-weight:600;color:#475569">數量</label>
+      <button type="button" id="qtyMinusBtn" onclick="(function(){var i=document.getElementById('itemQtyInput');var v=Math.max(1,(parseInt(i.value,10)||1)-1);i.value=v;i.dispatchEvent(new Event('input',{bubbles:true}));})()" style="width:36px;height:36px;border:1px solid #cbd5e1;background:#f1f5f9;border-radius:8px;font-size:18px;font-weight:700;cursor:pointer">−</button>
+      <input id="itemQtyInput" type="number" min="1" value="1" readonly inputmode="none" style="width:70px;text-align:center;background:#fff;cursor:pointer">
+      <button type="button" id="qtyPlusBtn" onclick="(function(){var i=document.getElementById('itemQtyInput');var v=Math.max(1,(parseInt(i.value,10)||1)+1);i.value=v;i.dispatchEvent(new Event('input',{bubbles:true}));})()" style="width:36px;height:36px;border:1px solid #cbd5e1;background:#f1f5f9;border-radius:8px;font-size:18px;font-weight:700;cursor:pointer">＋</button>
+      <span id="itemPricePreview" style="margin-left:auto;font-size:15px;font-weight:700;color:#1e293b">小計：$0</span>
+    </div>
+
+    <div class="form-actions" style="margin-top:16px">
+      <button id="saveProductConfigBtn" class="primary-btn" style="flex:1">確認加入</button>
+      <button id="cancelProductConfigBtn" class="secondary-btn">取消</button>
+    </div>
+  </div>
+</div>
+
+<input type="hidden" id="paymentTargetMode" value="new">
+<input type="hidden" id="paymentTargetOrderId" value="">
+<div id="paymentModal" class="modal hidden">
+  <div class="modal-backdrop" data-close="payment"></div>
+  <div class="modal-dialog">
+    <div class="row between wrap">
+      <h2>選擇支付方式</h2>
+      <button id="closePaymentModal" class="ghost-btn">✕</button>
+    </div>
+    <div class="payment-grid">
+      <button class="pay-btn" data-payment="現金">現金</button>
+      <button class="pay-btn" data-payment="刷卡">刷卡</button>
+      <button class="pay-btn" data-payment="Line Pay">Line Pay</button>
+      <button class="pay-btn" data-payment="其他">其他</button>
+      <button class="pay-btn pending" data-payment="待付款">待付款</button>
+    </div>
+  </div>
+</div>
+    <!-- ===== 現金收款 Modal（自製鍵盤，全程不調用系統鍵盤）v20260620 ===== -->
+<div id="cashPayModal" class="modal hidden">
+  <div class="modal-backdrop" id="cashPayBackdrop"></div>
+  <div class="modal-dialog" style="max-width:560px;width:94%">
+    <div class="row between wrap">
+      <h2 style="margin:0">現金收款</h2>
+      <button id="cashPayCloseBtn" class="ghost-btn">✕</button>
+    </div>
+
+    <div style="display:flex;gap:14px;margin-top:14px;flex-wrap:wrap">
+      <!-- 左半：金額顯示 + 快捷湊整 -->
+      <div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:10px">
+        <div style="background:#f1f5f9;border-radius:10px;padding:12px">
+          <div style="font-size:13px;color:#64748b">應收金額</div>
+          <div id="cashDueText" style="font-size:24px;font-weight:800;color:#0f172a">$0</div>
+        </div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px">
+          <div style="font-size:13px;color:#1d4ed8">實收金額</div>
+          <div id="cashReceivedText" style="font-size:28px;font-weight:800;color:#1e3a8a;min-height:34px">—</div>
+        </div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px">
+          <div style="font-size:13px;color:#15803d">找零</div>
+          <div id="cashChangeText" style="font-size:24px;font-weight:800;color:#166534">$0</div>
+        </div>
+        <div style="font-size:13px;color:#64748b;margin-top:2px">快捷收款</div>
+        <div id="cashQuickBtns" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+      </div>
+
+      <!-- 右半：自製數字鍵盤 -->
+      <div style="flex:1;min-width:200px">
+        <div id="cashKeypad" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <button type="button" class="cash-key" data-key="1">1</button>
+          <button type="button" class="cash-key" data-key="2">2</button>
+          <button type="button" class="cash-key" data-key="3">3</button>
+          <button type="button" class="cash-key" data-key="4">4</button>
+          <button type="button" class="cash-key" data-key="5">5</button>
+          <button type="button" class="cash-key" data-key="6">6</button>
+          <button type="button" class="cash-key" data-key="7">7</button>
+          <button type="button" class="cash-key" data-key="8">8</button>
+          <button type="button" class="cash-key" data-key="9">9</button>
+          <button type="button" class="cash-key" data-key="00">00</button>
+          <button type="button" class="cash-key" data-key="0">0</button>
+          <button type="button" class="cash-key" data-key="del" style="background:#fee2e2;color:#b91c1c">⌫</button>
+        </div>
+        <button type="button" id="cashClearBtn" class="cash-key" style="width:100%;margin-top:8px;background:#f1f5f9;color:#475569">清除</button>
+      </div>
+    </div>
+
+    <div class="form-actions" style="margin-top:16px">
+      <button id="cashConfirmBtn" class="primary-btn" style="flex:2;background:#10b981">確認收款</button>
+      <button id="cashCancelBtn" class="secondary-btn" style="flex:1">取消</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .cash-key{
+    padding:16px 0;font-size:22px;font-weight:700;border:1px solid #cbd5e1;
+    background:#fff;color:#0f172a;border-radius:10px;cursor:pointer;
+    user-select:none;-webkit-tap-highlight-color:transparent;
+  }
+  .cash-key:active{ background:#e2e8f0; }
+  .cash-quick{
+    padding:14px 0;font-size:18px;font-weight:700;border:1px solid #93c5fd;
+    background:#dbeafe;color:#1e40af;border-radius:10px;cursor:pointer;user-select:none;
+  }
+  .cash-quick:active{ background:#bfdbfe; }
+</style>
+<!-- ===== 通用數字輸入 Modal（折扣等用，自製鍵盤）v20260620 ===== -->
+<div id="numPadModal" class="modal hidden">
+  <div class="modal-backdrop" id="numPadBackdrop"></div>
+  <div class="modal-dialog" style="max-width:360px;width:92%">
+    <div class="row between wrap">
+      <h2 id="numPadTitle" style="margin:0">輸入數字</h2>
+      <button id="numPadCloseBtn" class="ghost-btn">✕</button>
+    </div>
+
+    <div id="numPadHint" style="font-size:13px;color:#64748b;margin-top:6px"></div>
+
+    <div style="background:#f1f5f9;border-radius:10px;padding:14px;margin-top:10px;text-align:right">
+      <span id="numPadValue" style="font-size:30px;font-weight:800;color:#0f172a">0</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px">
+      <button type="button" class="cash-key np-key" data-key="1">1</button>
+      <button type="button" class="cash-key np-key" data-key="2">2</button>
+      <button type="button" class="cash-key np-key" data-key="3">3</button>
+      <button type="button" class="cash-key np-key" data-key="4">4</button>
+      <button type="button" class="cash-key np-key" data-key="5">5</button>
+      <button type="button" class="cash-key np-key" data-key="6">6</button>
+      <button type="button" class="cash-key np-key" data-key="7">7</button>
+      <button type="button" class="cash-key np-key" data-key="8">8</button>
+      <button type="button" class="cash-key np-key" data-key="9">9</button>
+      <button type="button" class="cash-key np-key" data-key="00">00</button>
+      <button type="button" class="cash-key np-key" data-key="0">0</button>
+      <button type="button" class="cash-key np-key" data-key="del" style="background:#fee2e2;color:#b91c1c">⌫</button>
+    </div>
+
+    <div class="form-actions" style="margin-top:14px">
+      <button id="numPadConfirmBtn" class="primary-btn" style="flex:2;background:#10b981">確認</button>
+      <button id="numPadCancelBtn" class="secondary-btn" style="flex:1">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 開始值班 Modal ===== -->
+<div id="startSessionModal" class="modal hidden">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog" style="max-width:420px">
+    <div class="row between wrap">
+      <h2>🕐 開始值班</h2>
+      <button class="ghost-btn" onclick="document.getElementById('startSessionModal').classList.add('hidden')">✕</button>
+    </div>
+
+    <div style="margin-top:12px">
+      <label style="font-size:14px;font-weight:600">值班人員</label>
+      <select id="startStaffSelect" style="width:100%;padding:10px;margin-top:4px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px">
+        <option value="A1">A1</option>
+        <option value="A2">A2</option>
+        <option value="A3">A3</option>
+        <option value="A4">A4</option>
+      </select>
+    </div>
+
+    <div style="margin-top:14px">
+      <label style="font-size:14px;font-weight:600">💵 備用金清點</label>
+      <div id="startCashGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;padding:10px;background:#f1f5f9;border-radius:8px">
+        <span>合計</span>
+        <strong id="startCashTotal" style="color:#10b981">$0</strong>
+      </div>
+    </div>
+
+    <div class="form-actions" style="margin-top:16px">
+      <button id="confirmStartSessionBtn" class="primary-btn" style="flex:1;background:#10b981">🟢 開始值班</button>
+      <button class="secondary-btn" onclick="document.getElementById('startSessionModal').classList.add('hidden')">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 預約 30 分鐘前提醒 Modal ===== -->
+<div id="reservationReminderOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.75);z-index:99998;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:16px;max-width:480px;width:100%;padding:24px;border:3px solid #f59e0b;box-shadow:0 20px 60px rgba(0,0,0,0.35);max-height:92vh;overflow-y:auto">
+    <div style="font-size:22px;font-weight:700;color:#b45309;margin-bottom:6px">⏰ 預約取餐 30 分鐘內</div>
+    <div style="font-size:13px;color:#64748b;margin-bottom:14px">該開始備餐囉！按下方按鈕會自動列印廚房單與顧客單。</div>
+
+    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <strong id="reminderOrderNo" style="font-size:18px;color:#78350f">-</strong>
+        <strong id="reminderTotal" style="font-size:18px;color:#dc2626">$0</strong>
+      </div>
+      <div id="reminderMeta" style="font-size:13px;color:#92400e;margin-bottom:4px">-</div>
+      <div id="reminderCustomer" style="font-size:13px;color:#475569">-</div>
+    </div>
+
+    <div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:4px">訂單明細</div>
+    <div id="reminderItems" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;font-size:13px;max-height:160px;overflow-y:auto"></div>
+
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button id="reminderStartBtn" style="flex:2;padding:12px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">🔔 開始備餐並列印廚房單</button>
+      <button id="reminderLaterBtn" style="flex:1;padding:12px;background:#e2e8f0;color:#334155;border:none;border-radius:8px;font-size:14px;cursor:pointer">稍後再提醒</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 結束值班 Modal ===== -->
+<div id="endSessionModal" class="modal hidden">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog" style="max-width:480px;max-height:92vh;overflow-y:auto">
+    <div class="row between wrap">
+      <h2>🕐 結束值班</h2>
+      <button class="ghost-btn" onclick="document.getElementById('endSessionModal').classList.add('hidden')">✕</button>
+    </div>
+
+    <div id="endSessionInfo" style="font-size:13px;color:#64748b;margin-top:6px"></div>
+
+    <div style="margin-top:14px;padding:12px;background:#fef3c7;border-radius:8px;border:1px solid #fcd34d">
+      <div style="font-size:14px;font-weight:600;color:#78350f;margin-bottom:8px">💰 應收現金（系統計算）</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span>開班備用金</span><span id="endOpeningCash">$0</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span>本班現金訂單</span><span id="endCashSales">$0</span></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #fcd34d;font-weight:bold">
+        <span>應有現金</span><span id="endExpectedCash" style="color:#78350f">$0</span>
+      </div>
+    </div>
+
+    <div style="margin-top:14px">
+      <label style="font-size:14px;font-weight:600">💵 結束現金清點</label>
+      <div id="endCashGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;padding:10px;background:#f1f5f9;border-radius:8px">
+        <span>實收現金</span>
+        <strong id="endClosingCash">$0</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;padding:10px;border-radius:8px;background:#f0fdf4">
+        <span>誤差</span>
+        <strong id="endCashDiff" style="color:#10b981">$0 ✓</strong>
+      </div>
+    </div>
+    
+<!-- ===== 外送平台金額（手動輸入，計入「其他」付款，不影響現金） ===== -->
+    <div style="margin-top:14px;padding:12px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe">
+      <div style="font-size:14px;font-weight:600;color:#1e3a8a;margin-bottom:8px">🛵 外送平台金額（手動輸入）</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <label style="flex:0 0 100px;font-size:13px;color:#334155">熊貓 Grod</label>
+        <span style="color:#64748b">$</span>
+        <input id="endDeliveryPanda" type="number" inputmode="numeric" min="0" step="1" value="0"
+               style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:15px;text-align:right">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="flex:0 0 100px;font-size:13px;color:#334155">Uber</label>
+        <span style="color:#64748b">$</span>
+        <input id="endDeliveryUber" type="number" inputmode="numeric" min="0" step="1" value="0"
+               style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:15px;text-align:right">
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px dashed #bfdbfe;font-size:13px">
+        <span style="color:#334155">外送合計（計入「其他」付款）</span>
+        <strong id="endDeliveryTotal" style="color:#1e3a8a">$0</strong>
+      </div>
+      <div style="margin-top:6px;font-size:12px;color:#64748b">※ 外送金額不影響現金清點與誤差</div>
+    </div>
+    
+    <div style="margin-top:14px">
+      <label style="font-size:14px;font-weight:600">結束人員</label>
+      <select id="endStaffSelect" style="width:100%;padding:10px;margin-top:4px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px">
+        <option value="A1">A1</option>
+        <option value="A2">A2</option>
+        <option value="A3">A3</option>
+        <option value="A4">A4</option>
+      </select>
+    </div>
+
+    <div style="margin-top:12px">
+      <label style="font-size:14px;font-weight:600">備註</label>
+      <input id="endSessionNote" placeholder="（可選）例如：誤差原因說明" style="width:100%;padding:10px;margin-top:4px;border:1px solid #cbd5e1;border-radius:8px;box-sizing:border-box">
+    </div>
+
+    <div class="form-actions" style="margin-top:16px">
+      <button id="confirmEndSessionBtn" class="primary-btn" style="flex:1;background:#ef4444">🔴 確認結束</button>
+      <button class="secondary-btn" onclick="document.getElementById('endSessionModal').classList.add('hidden')">取消</button>
+    </div>
+
+  </div>
+</div>
+    <!-- ===== 班次摘要 Modal（結束值班後顯示） ===== -->
+<div id="sessionSummaryModal" class="modal hidden">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog" style="max-width:520px;max-height:92vh;overflow-y:auto">
+    <div class="row between wrap">
+      <h2>📋 班次摘要</h2>
+      <button class="ghost-btn" onclick="document.getElementById('sessionSummaryModal').classList.add('hidden')">✕</button>
+    </div>
+
+    <div id="summaryStaffInfo" style="font-size:13px;color:#64748b;margin-top:6px"></div>
+
+    <div id="summaryCashDiffBanner" style="margin-top:12px;padding:14px;border-radius:10px;text-align:center;font-size:16px;font-weight:bold"></div>
+
+    <div class="stat-grid" id="summaryStats" style="margin-top:14px"></div>
+
+    <div style="margin-top:14px">
+      <h3 style="margin:0 0 8px;font-size:15px">🍱 訂單類型</h3>
+      <div id="summaryOrderTypes" style="font-size:14px"></div>
+    </div>
+
+    <div style="margin-top:14px">
+      <h3 style="margin:0 0 8px;font-size:15px">💳 付款方式</h3>
+      <div id="summaryPayments" style="font-size:14px"></div>
+    </div>
+
+    <div style="margin-top:14px">
+      <h3 style="margin:0 0 8px;font-size:15px">🔥 熱銷 TOP5</h3>
+      <div id="summaryTopProducts" style="font-size:14px"></div>
+    </div>
+
+    <div class="form-actions" style="margin-top:18px;flex-wrap:wrap;gap:8px">
+      <button id="summaryPrintBtn" class="primary-btn" style="flex:1;min-width:140px;background:#3b82f6">🖨 列印報表</button>
+      <button id="summaryExportBtn" class="secondary-btn" style="flex:1;min-width:140px">📥 匯出 Excel</button>
+      <button id="summaryDoneBtn" class="primary-btn" style="flex:1;min-width:140px;background:#10b981">✓ 完成</button>
+    </div>
+  </div>
+</div>
+
+  </div>
+</div>
+
+  <!-- ===== 列印欄位選擇 Modal ===== -->
+<div id="printFieldsModal" class="modal hidden" style="z-index:9000">
+  <div class="modal-backdrop" data-close="print-fields"></div>
+  <div class="modal-dialog" style="max-width:420px">
+    <div class="row between wrap">
+      <h2 id="printFieldsTitle">選擇列印欄位</h2>
+      <button id="closePrintFieldsModal" class="ghost-btn">✕</button>
+    </div>
+    <div class="stack" style="margin-top:12px">
+      <label class="inline-check"><input type="checkbox" id="pf_storeName" checked> 店名</label>
+      <label class="inline-check"><input type="checkbox" id="pf_storePhone" checked> 電話</label>
+      <label class="inline-check"><input type="checkbox" id="pf_storeAddress" checked> 地址</label>
+      <label class="inline-check"><input type="checkbox" id="pf_orderNo" checked> 單號</label>
+      <label class="inline-check"><input type="checkbox" id="pf_createdAt" checked> 時間</label>
+      <label class="inline-check"><input type="checkbox" id="pf_orderType" checked> 訂單類型 / 桌號</label>
+      <label class="inline-check"><input type="checkbox" id="pf_paymentMethod" checked> 付款方式</label>
+      <label class="inline-check"><input type="checkbox" id="pf_itemSelections" checked> 品項模組選項</label>
+      <label class="inline-check"><input type="checkbox" id="pf_itemNote" checked> 品項備註</label>
+      <label class="inline-check"><input type="checkbox" id="pf_itemPrice" checked> 品項價格 / 小計</label>
+      <label class="inline-check"><input type="checkbox" id="pf_totalSection" checked> 合計 / 折扣區塊</label>
+      <label class="inline-check"><input type="checkbox" id="pf_footer" checked> 收據備註（頁尾）</label>
+    </div>
+    <div class="row gap wrap" style="margin-top:16px">
+      <button id="printFieldsConfirmBtn" class="primary-btn">確認預覽</button>
+      <button id="printFieldsCancelBtn" class="secondary-btn">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 列印預覽浮動視窗 ===== -->
+<div id="printPreviewModal" class="modal hidden" style="z-index:9100">
+  <div class="modal-backdrop" data-close="print-preview"></div>
+  <div class="modal-dialog wide" style="max-width:480px;padding:0;overflow:hidden;max-height:90vh;display:flex;flex-direction:column;">
+    <div class="row between wrap" style="padding:16px 20px;border-bottom:1px solid var(--line);">
+      <h2 id="printPreviewTitle">列印預覽</h2>
+      <div class="row gap">
+        <button id="printPreviewPrintBtn" class="primary-btn small-btn">列印</button>
+        <button id="closePrintPreviewModal" class="ghost-btn">✕</button>
+      </div>
+    </div>
+    <iframe id="printPreviewFrame" style="flex:1;width:100%;min-height:500px;border:none;background:#fff;"></iframe>
+  </div>
+</div>
+
+
+<!-- 班次列印選項 -->
+<div id="printOptionsModal" class="modal hidden" style="z-index:10000">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog" style="max-width:480px;width:92vw;max-height:90vh;overflow-y:auto">
+    <div class="row between wrap">
+      <h2 style="margin:0">🖨 列印選項</h2>
+      <button class="ghost-btn" onclick="document.getElementById('printOptionsModal').classList.add('hidden')">✕</button>
+    </div>
+
+    <div style="margin-top:14px">
+      <h3 style="margin:0 0 8px;font-size:15px">📋 列印內容</h3>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="optSummary" checked style="flex-shrink:0">
+        <span style="flex:1">💰 班次總覽（營業額／現金差異）</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="optOrderTypes" checked style="flex-shrink:0">
+        <span style="flex:1">🍱 訂單類型統計</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="optPayments" checked style="flex-shrink:0">
+        <span style="flex:1">💳 付款方式統計</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="optTopProducts" checked style="flex-shrink:0">
+        <span style="flex:1">🔥 熱銷 TOP10</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="optHourly" checked style="flex-shrink:0">
+        <span style="flex:1">🕐 時段分布</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="optOrderList" style="flex-shrink:0">
+        <span style="flex:1">📝 訂單明細清單</span>
+      </label>
+    </div>
+
+    <div style="margin-top:14px">
+      <h3 style="margin:0 0 8px;font-size:15px">📄 紙張格式</h3>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:6px;cursor:pointer">
+        <input type="radio" name="paperSize" value="A4" checked style="flex-shrink:0">
+        <span style="flex:1">A4（標準）</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:6px;cursor:pointer">
+        <input type="radio" name="paperSize" value="80mm" style="flex-shrink:0">
+        <span style="flex:1">80mm 熱感紙（收據機）</span>
+      </label>
+    </div>
+
+    <div class="form-actions" style="margin-top:18px;display:flex;gap:8px">
+      <button id="confirmPrintBtn" class="primary-btn" style="flex:1;background:#3b82f6">🖨 開始列印</button>
+      <button class="secondary-btn" style="flex:1" onclick="document.getElementById('printOptionsModal').classList.add('hidden')">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 歷史紀錄 Modal -->
+<div id="historySessionsModal" class="modal hidden" style="z-index:1200">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog" style="max-width:600px;width:92vw;max-height:88vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #e2e8f0">
+      <strong>📋 歷史班次紀錄</strong>
+      <button id="closeHistorySessionsModal" class="ghost-btn" style="font-size:20px;border:none;background:none;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:12px 18px;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <label style="font-size:13px;color:#64748b">從</label>
+      <input type="date" id="historyDateFrom" style="padding:6px;border:1px solid #cbd5e1;border-radius:6px">
+      <label style="font-size:13px;color:#64748b">到</label>
+      <input type="date" id="historyDateTo" style="padding:6px;border:1px solid #cbd5e1;border-radius:6px">
+      <button id="historyDateFilterBtn" class="primary-btn" style="padding:6px 12px;font-size:13px">篩選</button>
+      <button id="historyDateResetBtn" class="ghost-btn" style="padding:6px 12px;font-size:13px">近30天</button>
+    </div>
+    <div id="historySessionsList" style="flex:1;overflow-y:auto;padding:12px 18px"></div>
+  </div>
+</div>
+
+
+<!-- ===== 外部腳本 ===== -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js"></script>
+<script type="module" src="js/app.js"></script>
+<script type="module" src="js/modules/sheets-sync.js"></script>
+  
+<!-- 線上訂單全螢幕通知 -->
+<div id="onlineOrderOverlay" onclick="if(event.target===this){this.style.display='none';}"
+ style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.85); align-items:center; justify-content:center; flex-direction:column;">
+  <!-- 頂部提示 -->
+    <div style="text-align:center; margin-bottom:16px;">
+      <div id="overlayPulse" style="width:60px; height:60px; margin:0 auto 12px; border-radius:50%; background:#f59e0b; 
+        animation:pulse-ring 1.5s infinite; display:flex; align-items:center; justify-content:center;">
+        <span style="font-size:28px;">🔔</span>
+      </div>
+      <h2 style="margin:0; font-size:20px; color:#0f172a;">收到新的線上訂單！</h2>
+    </div>
+
+    <!-- 訂單資訊（與原本卡片相同） -->
+    <div style="border:2px solid #f59e0b; border-radius:12px; padding:16px; background:#fffbeb;">
+      <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
+        <div>
+          <span id="overlayOrderNo" style="font-weight:bold; font-size:15px;"></span>
+          <span style="background:#f59e0b; color:#fff; font-size:12px; padding:2px 8px; border-radius:4px; margin-left:8px;">待確認</span>
+        </div>
+        <span id="overlayTotal" style="font-size:18px; font-weight:bold; color:#ef4444;"></span>
+      </div>
+      <div id="overlayMeta" style="font-size:13px; color:#64748b; margin-bottom:4px;"></div>
+      <div id="overlayCustomer" style="font-size:13px; color:#64748b; margin-bottom:12px;"></div>
+
+      <!-- 品項列表 -->
+      <div id="overlayItems" style="margin-bottom:16px; font-size:14px; color:#334155;"></div>
+
+      <!-- 備餐時間 -->
+      <div style="margin-bottom:12px;">
+        <label style="font-size:14px; font-weight:600; color:#334155;">備餐時間（分鐘）</label>
+        <input type="number" id="overlayPrepTime" value="20" style="width:100%; padding:10px; margin-top:4px; border:1px solid #cbd5e1; border-radius:8px; font-size:16px; box-sizing:border-box;" />
+      </div>
+
+      <!-- 回覆顧客訊息 -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:14px; font-weight:600; color:#334155;">回覆顧客訊息</label>
+        <input type="text" id="overlayMessage" placeholder="例如：大約 20 分鐘後可取餐" style="width:100%; padding:10px; margin-top:4px; border:1px solid #cbd5e1; border-radius:8px; font-size:16px; box-sizing:border-box;" />
+      </div>
+
+      <!-- 按鈕 -->
+      <div style="display:flex; gap:12px;">
+        <button id="overlayAcceptBtn" style="flex:1; padding:14px; font-size:16px; font-weight:bold; border:none; border-radius:10px; background:#3b82f6; color:#fff; cursor:pointer;">確認接單</button>
+        <button id="overlayRejectBtn" style="flex:1; padding:14px; font-size:16px; font-weight:bold; border:none; border-radius:10px; background:#fff; color:#ef4444; border:2px solid #ef4444; cursor:pointer;">拒絕訂單</button>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+@keyframes pulse-ring {
+  0%{box-shadow:0 0 0 0 rgba(245,158,11,0.6);}
+  70%{box-shadow:0 0 0 20px rgba(245,158,11,0);}
+  100%{box-shadow:0 0 0 0 rgba(245,158,11,0);}
+}
+</style>
+<!-- 預約 30 分鐘前提醒 overlay -->
+<div id="reservationReminderOverlay" onclick="if(event.target===this){this.style.display='none';}"
+ style="display:none; position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,0.85); align-items:center; justify-content:center; flex-direction:column;">
+  <div style="text-align:center; margin-bottom:16px;">
+    <div style="width:60px; height:60px; margin:0 auto 12px; border-radius:50%; background:#10b981; animation:pulse-ring 1.5s infinite; display:flex; align-items:center; justify-content:center;">
+      <span style="font-size:28px;">⏰</span>
+    </div>
+    <h2 style="margin:0; font-size:20px; color:#fff;">預約取餐 30 分鐘倒數</h2>
+  </div>
+  <div style="border:2px solid #10b981; border-radius:12px; padding:16px; background:#ecfdf5; max-width:480px; width:90%;">
+    <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
+      <div>
+        <span id="reminderOrderNo" style="font-weight:bold; font-size:15px;"></span>
+        <span style="background:#10b981; color:#fff; font-size:12px; padding:2px 8px; border-radius:4px; margin-left:8px;">預約備餐</span>
+      </div>
+      <span id="reminderTotal" style="font-size:18px; font-weight:bold; color:#ef4444;"></span>
+    </div>
+    <div id="reminderMeta" style="font-size:13px; color:#64748b; margin-bottom:4px;"></div>
+    <div id="reminderCustomer" style="font-size:13px; color:#64748b; margin-bottom:12px;"></div>
+    <div id="reminderItems" style="margin-bottom:16px; font-size:14px; color:#334155;"></div>
+    <div style="display:flex; gap:12px;">
+      <button id="reminderStartBtn" style="flex:1; padding:14px; font-size:16px; font-weight:bold; border:none; border-radius:10px; background:#10b981; color:#fff; cursor:pointer;">🔔 開始備餐並列印廚房單</button>
+      <button id="reminderLaterBtn" style="flex:1; padding:14px; font-size:16px; font-weight:bold; border:none; border-radius:10px; background:#fff; color:#64748b; border:2px solid #cbd5e1; cursor:pointer;">稍後</button>
+    </div>
+  </div>
+</div>
+  
+<!-- 歷史紀錄 Modal -->
+<div id="historySessionsModal" class="modal hidden" style="z-index:1200">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog" style="max-width:600px;width:92vw;max-height:88vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #e2e8f0">
+      <strong>📋 歷史班次紀錄</strong>
+      <button id="closeHistorySessionsModal" class="ghost-btn" style="font-size:20px;border:none;background:none;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:12px 18px;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <label style="font-size:13px;color:#64748b">從</label>
+      <input type="date" id="historyDateFrom" style="padding:6px;border:1px solid #cbd5e1;border-radius:6px">
+      <label style="font-size:13px;color:#64748b">到</label>
+      <input type="date" id="historyDateTo" style="padding:6px;border:1px solid #cbd5e1;border-radius:6px">
+      <button id="historyDateFilterBtn" class="primary-btn" style="padding:6px 12px;font-size:13px">篩選</button>
+      <button id="historyDateResetBtn" class="ghost-btn" style="padding:6px 12px;font-size:13px">近30天</button>
+    </div>
+    <div id="historySessionsList" style="flex:1;overflow-y:auto;padding:12px 18px"></div>
+  </div>
+</div>
+
+</body>
+</html>
