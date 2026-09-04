@@ -650,6 +650,8 @@ function openProductForm(product){
   renderCategoryOptions();
   document.getElementById('productCategory').value = product.category || '未分類';
   state.editModules = deepCopy(product.modules||[]);
+  state.editSizes = deepCopy(product && product.sizes ? product.sizes : []);
+  renderProductSizesEditor();
   renderModuleSelect();
   renderProductModulesEditor();
   validateProductForm(false);
@@ -1219,6 +1221,7 @@ export function initProductsPage(){
       image: resolvedUrl || imageFromForm,
       description: (document.getElementById('productDescription')?.value || '').trim().slice(0, 60),
       modules: deepCopy(state.editModules || []),
+      sizes: deepCopy(state.editSizes || []),
       sortOrder: idEl?.value ? (state.products.find(p=>p.id===idEl.value)?.sortOrder ?? state.products.length) : state.products.length,
     };
     const idx = state.products.findIndex(p=>p.id===product.id);
