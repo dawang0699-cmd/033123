@@ -131,20 +131,25 @@ function flattenSelections(product){
       const opt = mod.options.find(o=>o.id===val);
       if(opt) rows.push({moduleId:mod.id, moduleName:mod.name, optionId:opt.id, optionName:opt.name, price:opt.price});
     }
-  }
+   }
   return rows;
 }
 
-function updateItemPricePreview(product){
-  let add = 0;
-  const selections = flattenSelections(product);
-  selections.forEach(s=> add += Number(s.price || 0));
-  const qty = Math.max(1, Number(document.getElementById('itemQtyInput').value || 1));
-  const subtotal = (Number(product.price||0) + add) * qty;
-  document.getElementById('itemPricePreview').textContent = '小計：' + money(subtotal);
+function getEffectiveBasePrice(product){
+  const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+  const i = state.currentSizeIndex;
+  if(i >= 0 && sizes[i]) return Number(sizes[i].price || 0);
+  return Number(product.price || 0);
+}
+function getSizeSuffix(product){
+  const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+  const i = state.currentSizeIndex;
+  if(i >= 0 && sizes[i] && sizes[i].name) return '(' + sizes[i].name + ')';
+  return '';
 }
 
-function renderProductConfig(product){
+function updateItemPricePreview(product){
+
   document.getElementById('productConfigTitle').textContent = product.name + ' - 設定';
   const wrap = document.getElementById('productConfigModules');
   wrap.innerHTML = '';
