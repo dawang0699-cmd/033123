@@ -345,6 +345,31 @@ export function renderModuleLibrary(expandModuleId=''){
     wrap.appendChild(card);
   });
 }
+function renderProductSizesEditor(){
+  const wrap = document.getElementById('productSizesEditor');
+  if(!wrap) return;
+  if(!Array.isArray(state.editSizes)) state.editSizes = [];
+  wrap.innerHTML = '';
+  if(!state.editSizes.length){
+    wrap.innerHTML = '<div class="muted" style="font-size:12px">尚未設定份量，客人點餐時只會用原價</div>';
+    return;
+  }
+  state.editSizes.forEach((sz, index)=>{
+    const row = document.createElement('div');
+    row.className = 'row gap wrap';
+    row.style.alignItems = 'center';
+    row.innerHTML =
+      '<input class="input sz-name" placeholder="份量名稱（例：4個）" value="'+escapeAttr(sz.name||'')+'" style="flex:1;min-width:120px">' +
+      '<input class="input sz-price" type="number" min="0" placeholder="價格" value="'+Number(sz.price||0)+'" style="width:100px">' +
+      '<button type="button" class="danger-btn small-btn sz-del">刪除</button>';
+    const nameInput = row.querySelector('.sz-name');
+    const priceInput = row.querySelector('.sz-price');
+    nameInput.oninput = ()=>{ state.editSizes[index].name = nameInput.value; };
+    priceInput.oninput = ()=>{ state.editSizes[index].price = Number(priceInput.value||0); };
+    row.querySelector('.sz-del').onclick = ()=>{ state.editSizes.splice(index,1); renderProductSizesEditor(); };
+    wrap.appendChild(row);
+  });
+}
 
 export function renderProductModulesEditor(){
   const wrap = document.getElementById('productModulesEditor');
