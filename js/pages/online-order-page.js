@@ -14,6 +14,7 @@ import { pullPromotionsFromCloud, getPaymentRewardPoints } from '../modules/prom
 
 const onlineState = {
   selectedCategory: '全部',
+  currentSizeIndex: -1,
   cart: [],
   currentSelections: {},
   configTarget: null,
@@ -112,6 +113,18 @@ function flattenSelections(product){
   }
   return rows;
 }
+function getEffectiveBasePrice(product){
+  const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+  const i = onlineState.currentSizeIndex;
+  if(i >= 0 && sizes[i]) return Number(sizes[i].price || 0);
+  return Number(product.price || 0);
+}
+function getSizeSuffix(product){
+  const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+  const i = onlineState.currentSizeIndex;
+  if(i >= 0 && sizes[i] && sizes[i].name) return '(' + sizes[i].name + ')';
+  return '';
+}
 
 function sameSelections(a=[], b=[]){
   if(a.length !== b.length) return false;
@@ -185,8 +198,8 @@ function updateItemPricePreview(product){
   const selections = flattenSelections(product);
   selections.forEach(s=> add += Number(s.price || 0));
   const qty = Math.max(1, Number(document.getElementById('onlineItemQtyInput').value || 1));
-  document.getElementById('onlineItemPricePreview').textContent = '小計：' + money((Number(product.price||0) + add) * qty);
-}
+  document.getElementById('onlineItemPricePreview').textContent = '小計：' + money((getEffectiveBasePrice(product) + add) * qty);
+
 
 function renderProductConfig(product){
   document.getElementById('onlineModalTitle').textContent = product.name;
@@ -196,6 +209,27 @@ function renderProductConfig(product){
 
   const wrap = document.getElementById('onlineModalModules');
   wrap.innerHTML = '';
+  const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+if(sizes.length){
+  const sizeBlock = document.createElement('div');
+  sizeBlock.className = 'config-module';
+  sizeBlock.innerHTML = '<div class="config-module-title">份量</div>';
+  const sizeList = document.createElement('div');
+  sizeList.className = 'config-options';
+  sizes.forEach((sz, idx) => {
+    const b = document.createElement('button');
+    b.className = 'option-btn' + (onlineState.currentSizeIndex === idx ? ' active' : '');
+    b.textContent = sz.name + '（$' + Number(sz.price||0) + '）';
+    b.onclick = () => {
+      onlineState.currentSizeIndex = (onlineState.currentSizeIndex === idx ? -1 : idx);
+      renderProductConfig(product);
+    };
+    sizeList.appendChild(b);
+  });
+  sizeBlock.appendChild(sizeList);
+  wrap.appendChild(sizeBlock);
+}
+
   (product.modules || []).forEach(att=>{
     const mod = state.modules.find(m=>m.id===att.moduleId);
     if(!mod) return;
@@ -247,11 +281,15 @@ function openProductConfigForNew(productId){
   document.getElementById('onlineItemNoteInput').value = '';
   document.getElementById('onlineItemQtyInput').value = 1;
   renderProductConfig(product);
+  onlineState.currentSizeIndex = -1;
+
   document.getElementById('onlineProductModal').classList.remove('hidden');
 }
 
 function openProductConfigForEdit(rowId){
   const item = onlineState.cart.find(x=>x.rowId===rowId);
+  onlineState.currentSizeIndex = (item.sizeIndex ?? -1);
+
   if(!item) return;
   const product = state.products.find(p=>p.id===item.productId && p.enabled!==false);
   if(!product) return;
@@ -271,6 +309,8 @@ function closeProductConfig(){
   document.getElementById('onlineProductModal').classList.add('hidden');
   onlineState.configTarget = null;
   onlineState.currentSelections = {};
+  onlineState.currentSizeIndex = -1;
+
 }
 
 function renderCart(){
@@ -891,8 +931,10 @@ async function init(){
     const payload = {
       rowId: onlineState.configTarget?.mode === 'edit' ? onlineState.configTarget.rowId : id(),
       productId: product.id,
-      name: product.name,
-      basePrice: Number(product.price||0),
+      name: product.name + getSizeSuffix(product),
+basePrice: getEffectiveBasePrice(product),
+sizeIndex: onlineState.currentSizeIndex,
+
       qty: Math.max(1, Number(document.getElementById('onlineItemQtyInput').value || 1)),
       note: document.getElementById('onlineItemNoteInput').value.trim(),
       selections,
