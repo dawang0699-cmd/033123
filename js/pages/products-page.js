@@ -602,6 +602,8 @@ export function resetProductForm(){
   renderCategoryOptions();
   if(catEl) catEl.value = '未分類';
   state.editModules = [];
+  state.editSizes = [];
+  renderProductSizesEditor();
   renderProductImagePreview('');
   const statusEl = document.getElementById('productImageStatus');
   if(statusEl) statusEl.textContent = '';
@@ -1157,6 +1159,11 @@ export function initProductsPage(){
     if(state.editModules.some(m=>m.moduleId===moduleId)) return alert('此模組已加入');
     state.editModules.push({moduleId, requiredOverride:null});
     renderProductModulesEditor();
+  });
+  document.getElementById('addSizeBtn')?.addEventListener('click', ()=>{
+    if(!Array.isArray(state.editSizes)) state.editSizes = [];
+    state.editSizes.push({ name:'', price:0 });
+    renderProductSizesEditor();
   });
 
       // SKU 變動時即時嘗試對應圖片
