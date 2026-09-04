@@ -198,7 +198,7 @@ function updateItemPricePreview(product){
   const selections = flattenSelections(product);
   selections.forEach(s=> add += Number(s.price || 0));
   const qty = Math.max(1, Number(document.getElementById('onlineItemQtyInput').value || 1));
-  document.getElementById('onlineItemPricePreview').textContent = '小計：' + money((getEffectiveBasePrice(product) + add) * qty);
+  document.getElementById('onlineItemPricePreview').textContent = '小計：' + money((getEffectiveBasePrice(product) + add) * qty);}
 
 
 function renderProductConfig(product){
