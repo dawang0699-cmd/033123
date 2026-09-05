@@ -949,14 +949,15 @@ function ensurePendingModal(){
         const name = (item.name||'').trim();
         const price = Number(item.price||0);
         if(!name || !(price > 0)) return;
-        state.products.push({
-          id:item.id||id(), name, price,
-          category:item.category||'未分類',
-          enabled:item.enabled!==false,
-          image:item.image||'',
-          modules:item.modules||[],
-          sortOrder:state.products.length
-        });
+              state.products.push({
+        id:item.id||id(), name, price,
+        category:item.category||'未分類',
+        enabled:true, image:item.image||'',
+        sizes:item.sizes||[],
+        modules:item.modules||[],
+        sortOrder:state.products.length
+      });
+
         state.pendingProducts = state.pendingProducts.filter(x=>x.id !== item.id);
         applied++;
       });
@@ -1008,13 +1009,16 @@ function renderPendingModal(){
       const price = Number(item.price||0);
       if(!name) return alert('請先輸入品項名稱');
       if(!price || price <= 0) return alert('請先輸入正確價格');
-      state.products.push({
-        id:item.id||id(), name, price,
-        category:item.category||'未分類',
-        enabled:true, image:item.image||'',
-        modules:item.modules||[],
-        sortOrder:state.products.length
+           state.products.push({
+        id: item.id || id(), name, price,
+        category: item.category || '未分類',
+        enabled: item.enabled !== false,
+        image: item.image || '',
+        sizes: item.sizes || [],
+        modules: item.modules || [],
+        sortOrder: state.products.length
       });
+
       state.pendingProducts = state.pendingProducts.filter(x=>x.id !== item.id);
       state.products.sort((a,b)=>a.sortOrder-b.sortOrder).forEach((p,i)=> p.sortOrder = i);
       persistAll(); window.refreshAllViews();
