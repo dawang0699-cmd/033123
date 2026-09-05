@@ -1059,3 +1059,43 @@ export function stopReservationReminderLoop(){
     reservationReminderInterval = null;
   }
 }
+// ============================================================
+// 菜單發布（純以店鋪代碼 storeCode 做區隔）
+// ============================================================
+export async function publishMenuToFirebase(){
+  // 1. 取得 POS 設定中填寫的店鋪代碼（例如：STORE001）
+  const storeCode = getStoreCode();
+
+  // 2. 指定寫入 Firebase 的完整路徑為 menu/STORE001
+  const menuRef = await getRef(`menu/${storeCode}`);
+
+  // 3. 整理商品資料（確保 sizes 規格/份量完整匯出）
+  const cleanProducts = (state.products || []).map(p => ({
+    id: p.id,
+    sku: p.sku || '',
+    name: p.name || '',
+    price: Number(p.price || 0),
+    category: p.category || '未分類',
+    image: p.image || '',
+    enabled: p.enabled !== false,
+    soldOut: p.soldOut === true,
+    sortOrder: Number(p.sortOrder || 0),
+    sizes: Array.isArray(p.sizes) ? p.sizes.map(s => ({
+      name: String(s.name || '').trim(),
+      price: Number(s.price || 0)
+    })) : [],
+    modules: p.modules || []
+  }));
+
+  // 4. 將資料寫入該店鋪代碼目錄下
+  await dbApi.set(menuRef, {
+    storeCode: storeCode,
+    categories: state.categories || [],
+    modules: state.modules || [],
+    products: cleanProducts,
+    storeInfo: state.settings?.store || {},
+    updatedAt: new Date().toISOString()
+  });
+
+  updateSyncStatus(`線上菜單已成功同步至店鋪：${storeCode}`);
+}
