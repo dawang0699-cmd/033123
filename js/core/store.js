@@ -94,6 +94,8 @@ const DEFAULT_PRINT_CONFIG = {
   kitchenCopies: 1,
   autoPrintCheckout: false,
   autoPrintKitchen: false,
+  autoPrintCheckout: false,
+  autoPrintNumberTicket: false,
   openDrawer: true,
   // v20260620 新增：每種單別各自指定走哪台印表機
   // 'auto' = 維持自動偵測順序（sunmi→bluetooth→network），這是預設，確保現有 T2 不改設定照舊運作
