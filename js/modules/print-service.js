@@ -782,6 +782,41 @@ export async function printOrderLabels(order){
   await bridgeBrowserPrint(html);
   return { route:'browser', ok:true };
 }
+// ── 號碼單：只印訂單號碼後三碼 ──
+export function getNumberTicketHtml(order){
+  const cfg = getPrintSettings();
+  const w = Number(cfg.labelPaperWidth || 60);
+  const h = Number(cfg.labelPaperHeight || 40);
+  const no = String(order.orderNo || order.id || '').slice(-3);
+  const css = `<style>
+    @page { size: ${w}mm ${h}mm; margin: 0; }
+    html,body { margin:0; padding:0; }
+    body { font-family:"PingFang TC",sans-serif; color:#000;
+           width:${w}mm; height:${h}mm; display:flex;
+           align-items:center; justify-content:center; }
+    .no { font-size:${Math.floor(h * 1.2)}mm; font-weight:700; }
+  </style>`;
+  return `<!doctype html><html><head><meta charset="utf-8">${css}</head><body><div class="no">${escapeHtml(no)}</div></body></html>`;
+}
+
+export async function printNumberTicket(order){
+  const no = String(order.orderNo || order.id || '').slice(-3);
+  const html = getNumberTicketHtml(order);
+  await detectPrinters(true);
+  const d = getDetect();
+  if(d && d.mode === 'webview'){
+    // Sunmi 走大字直印
+    if(hasSunmi() && typeof window.SunmiPrinter.printTextWithFont === 'function'){
+      try{
+        window.SunmiPrinter.printTextWithFont('\n' + no + '\n\n', '', 72);
+        if(typeof window.SunmiPrinter.cutPaper === 'function') window.SunmiPrinter.cutPaper();
+        return { route:'sunmi-font', ok:true };
+      }catch(e){}
+    }
+  }
+  await bridgeBrowserPrint(html);
+  return { route:'browser', ok:true };
+}
 
 // ============================================================
 // 錢箱
