@@ -252,13 +252,12 @@ function showOnlineOrderOverlay(orderId){
           cust.syncCustomerToFirebase(posOrder);
         } catch (e) { console.warn('顧客主檔更新失敗：', e); }
 
-
         if(!isReservation){
           try{
-            const { printOrderReceipt, printKitchenCopies } = await import('./print-service.js');
+            const { printKitchenCopies } = await import('./print-service.js');
             const cfg2 = ensureRealtimeConfig();
+            // 線上訂單=待付款：接單時只印廚房單（顧客單於之後 POS 結帳時才印）
             if(cfg2.autoPrintKitchenOnConfirm) printKitchenCopies(posOrder);
-            if(cfg2.autoPrintReceiptOnConfirm) printOrderReceipt(posOrder, 'customer');
           }catch(pe){ console.error('自動列印失敗：', pe); }
         }
       }
@@ -325,7 +324,7 @@ function startAlarm(orderId){
     stopAlarm();
     if(!autoOrderId) return;
     try{
-      const result = await confirmOnlineOrder(autoOrderId, 20, '系統自動接單，預計準備時間 20 分鐘');
+      const result = await confirmOnlineOrder(autoOrderId, 30, '系統自動接單，預計準備時間 30 分鐘');
       if(result){
                 const posOrder = buildRealtimeOrderForPOS(result);
         try {
@@ -345,10 +344,10 @@ function startAlarm(orderId){
 
 
         try{
-          const { printOrderReceipt, printKitchenCopies } = await import('./print-service.js');
+          const { printKitchenCopies } = await import('./print-service.js');
           const cfg2 = ensureRealtimeConfig();
+          // 線上訂單=待付款：接單時只印廚房單（顧客單於之後 POS 結帳時才印）
           if(cfg2.autoPrintKitchenOnConfirm) printKitchenCopies(posOrder);
-          if(cfg2.autoPrintReceiptOnConfirm) printOrderReceipt(posOrder, 'customer');
         }catch(pe){ console.error('自動接單列印失敗：', pe); }
       }
       if(typeof window.refreshAllViews === 'function') window.refreshAllViews();
