@@ -201,8 +201,13 @@ function normalizeProducts(products, modulesRef){
       enabled: p.enabled !== false,
       soldOut: p.soldOut === true,
       sortOrder: Number(p.sortOrder || 0),
+      sizes: Array.isArray(p.sizes) ? p.sizes.map(s => ({
+        name: String(s.name || '').trim(),
+        price: Number(s.price || 0)
+      })) : [],
       modules: mods
     };
+
   });
 }
 
