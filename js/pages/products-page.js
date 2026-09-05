@@ -1273,14 +1273,16 @@ export function initProductsPage(){
       const name = (item.name || '').trim();
       const price = Number(item.price || 0);
       if(!name || !(price > 0)) return;
-      state.products.push({
+            state.products.push({
         id: item.id || id(), name, price,
         category: item.category || '未分類',
         enabled: item.enabled !== false,
         image: item.image || '',
+        sizes: item.sizes || [],
         modules: item.modules || [],
         sortOrder: state.products.length
       });
+
       state.pendingProducts = state.pendingProducts.filter(x=>x.id !== item.id);
       applied++;
     });
