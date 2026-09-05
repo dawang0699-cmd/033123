@@ -130,10 +130,20 @@ function normalizeImportedRow(row){
   const name = String(row['商品名稱'] ?? row['名稱'] ?? row['name'] ?? row['Name'] ?? '').trim();
   const price = Number(row['價格'] ?? row['售價'] ?? row['price'] ?? row['Price'] ?? 0);
   const category = String(row['分類'] ?? row['category'] ?? row['Category'] ?? '未分類').trim() || '未分類';
-  const enabledText = String(row['狀態'] ?? row['啟用'] ?? row['enabled'] ?? '啟用').trim();
+    const enabledText = String(row['狀態'] ?? row['啟用'] ?? row['enabled'] ?? '啟用').trim();
   const enabled = !['false', '停用', '0', '關閉'].includes(enabledText);
-  return { sku, name, price, category, enabled };
+  const sizesText = String(row['份量'] ?? row['sizes'] ?? '').trim();
+  const sizes = sizesText
+    ? sizesText.split('|').map(seg => {
+        const [label, priceStr] = seg.split('=');
+        return { name: String(label || '').trim(), price: Number(priceStr) || 0 };
+      }).filter(s => s.name)
+    : [];
+  const moduleNamesText = String(row['加購模組'] ?? row['modules'] ?? '').trim();
+  const moduleNames = moduleNamesText ? moduleNamesText.split('|').map(s => s.trim()).filter(Boolean) : [];
+  return { sku, name, price, category, enabled, sizes, moduleNames };
 }
+
 
 function importExcelRowsToPending(rows){
   const imported = [];
@@ -191,12 +201,20 @@ function importExcelRowsToPending(rows){
     if(item.sku && skuMap[item.sku] && baseUrl){
       image = baseUrl + skuMap[item.sku];
     }
+        const importedModules = (item.moduleNames || [])
+      .map(nm => {
+        const mod = (state.modules || []).find(m => (m.name || '').trim() === nm);
+        return mod ? { moduleId: mod.id } : null;
+      })
+      .filter(Boolean);
     imported.push({
       id: id(), sku: item.sku, name: item.name, price: item.price,
       category: item.category || '未分類', enabled: item.enabled,
-      modules: [], image,
+      sizes: item.sizes || [],
+      modules: importedModules, image,
       sortOrder: state.products.length + imported.length, status: 'pending'
     });
+
   });
 
   // 結果回報
@@ -232,13 +250,16 @@ async function importExcelFile(file){
 
 function exportProductsToExcel(){
   if(!window.XLSX){ alert('Excel 套件尚未載入，請重新整理'); return; }
-  const rows = (state.products || []).map(p => ({
+    const rows = (state.products || []).map(p => ({
     SKU: p.sku || '',
     商品名稱: p.name || '',
     價格: Number(p.price || 0),
     分類: p.category || '未分類',
-    狀態: p.enabled === false ? '停用' : '啟用'
+    狀態: p.enabled === false ? '停用' : '啟用',
+    份量: (Array.isArray(p.sizes) ? p.sizes : []).map(s => `${s.name}=${Number(s.price || 0)}`).join('|'),
+    加購模組: getProductModuleNames(p).join('|')
   }));
+
   if(!rows.length){ alert('沒有商品可匯出'); return; }
   const workbook = buildWorkbookFromRows(rows);
   const blob = workbookToBlob(workbook);
