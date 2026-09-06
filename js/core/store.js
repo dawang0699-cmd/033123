@@ -207,9 +207,9 @@ function normalizeProducts(products, modulesRef){
         name: String(s.name || '').trim(),
         price: Number(s.price || 0)
       })) : [],
+      onlineVisible: p.onlineVisible === false ? false : true,
       modules: mods
     };
-
   });
 }
 
