@@ -758,7 +758,7 @@ export async function syncMenuToFirebase(){
   const menuKey = cfg.projectId || 'default';
   const menuData = {
     categories: state.categories || [],
-    products: (state.products || []).map(function(p){
+    products: (state.products || []).filter(function(p){ return p.onlineVisible !== false; }).map(function(p){
   return {
     id: p.id,
     sku: p.sku || '',
