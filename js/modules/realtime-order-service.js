@@ -679,7 +679,7 @@ oteDiscount);
     // 折扣欄位：用顧客端套用的優惠碼結果，而不是寫死 0
     discountType: 'amount',
     discountValue: remoteDiscount,
-    discountAmount: remoteDiscount,
+    discountAmount: remoteDiscount + payCashDiscount,
     couponCode: remoteCouponCode,
     couponMessage: remoteCouponMessage,
     pointsRequested: Math.max(0, Math.round(Number(remote.pointsRequested || 0))),
