@@ -463,8 +463,9 @@ function finalizeOrder(paymentMethod){
 
 // ── 現場訂單列印（待付款只印廚房單；直接結帳印廚房單+顧客單）──
 if(order){
-    // 廚房單：待付款與結帳都印
-    if(printConfig.autoPrintKitchen){
+        // 廚房單：線上單接單時已印過，結帳不再重印；僅現場待付款單在此列印
+    var alreadyPrintedKitchen = String(order.id || '').indexOf('online_') === 0;
+    if(printConfig.autoPrintKitchen && !alreadyPrintedKitchen){
         try { printKitchenCopies(order); }
         catch(e) { console.error('列印廚房單失敗:', e); }
     }
