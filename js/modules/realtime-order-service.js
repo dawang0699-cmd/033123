@@ -861,10 +861,12 @@ export async function fetchAndMergeMenuFromFirebase(){
         modules: Array.isArray(cp.modules) ? cp.modules : [],
         sortOrder: Number(cp.sortOrder || 0),
         enabled,
+        sizes: Array.isArray(cp.sizes) ? cp.sizes : (lp && Array.isArray(lp.sizes) ? lp.sizes : []),
         soldOut
       });
       usedIds.add(cp.id);
       cloudCount++;
+
     });
     localProds.forEach(p => { if(p && p.id && !usedIds.has(p.id)){ merged.push(p); localKeptCount++; }});
     state.products = merged;
