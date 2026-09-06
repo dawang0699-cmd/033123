@@ -678,7 +678,7 @@ async function submitOnlineOrder(){
     orderNo: 'ON' + Date.now(),
     customerName: name,
     customerPhone: phone,
-    customerLookupKey: String(phone || '').trim(),
+    customerLookupKey: String(phone || '').replace(/\D/g,''),
     customerNote,
     orderType: '線上點餐-' + orderType,
     reservationAt,
