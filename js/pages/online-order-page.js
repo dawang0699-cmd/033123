@@ -563,17 +563,22 @@ function refreshOnlineTotals(){
 
   // 本次可得點數：依客人選的付款別，用對應回饋碼算（不折現金、純預覽、結帳完成才入帳）
   let reward = 0;
+  let payCashDiscount = 0;
   if(onlineState.payMethod){
     try{
       const r = getPaymentRewardPoints(onlineState.cart, onlineState.payMethod);
-      reward = Math.max(0, Number(r && r.points || 0));
-    }catch(e){ reward = 0; }
+      if(r && r.rewardMode === 'cash'){
+        payCashDiscount = Math.max(0, Number(r.cashDiscount || 0));
+        reward = 0;
+      } else {
+        reward = Math.max(0, Number(r && r.points || 0));
+      }
+    }catch(e){ reward = 0; payCashDiscount = 0; }
   }
-
-  const grand = Math.max(0, subtotal - couponDiscount - pointsUse);
-
+  onlineState._payCashDiscount = payCashDiscount;
+  const grand = Math.max(0, subtotal - couponDiscount - payCashDiscount - pointsUse);
   const dEl = document.getElementById('onlineDiscountSummaryText');
-  if(dEl) dEl.textContent = '-' + money(couponDiscount + pointsUse);
+  if(dEl) dEl.textContent = '-' + money(couponDiscount + payCashDiscount + pointsUse);
   const rEl = document.getElementById('onlineRewardPointsText');
   if(rEl) rEl.textContent = fmtPts(reward);
   const gEl = document.getElementById('onlineGrandTotalSummaryText');
@@ -672,8 +677,15 @@ async function submitOnlineOrder(){
   }
   // v20260603-v2：折抵點數（受餘額與「小計−折扣」上限約束）
   const pointsRequested = getOnlinePointsUse();
-  const grandTotal = Math.max(0, subtotal - promoDiscount - pointsRequested);
-
+  // v20260906：直接折扣（rewardMode=cash）當次折現金，一起扣
+  let payCashDiscount = 0;
+  if(onlineState.payMethod){
+    try{
+      const r = getPaymentRewardPoints(onlineState.cart, onlineState.payMethod);
+      if(r && r.rewardMode === 'cash') payCashDiscount = Math.max(0, Number(r.cashDiscount || 0));
+    }catch(e){ payCashDiscount = 0; }
+  }
+  const grandTotal = Math.max(0, subtotal - promoDiscount - payCashDiscount - pointsRequested);
   const payload = {
     orderNo: 'ON' + Date.now(),
     customerName: name,
@@ -690,6 +702,7 @@ async function submitOnlineOrder(){
     couponMessage: promoMessage,
     payMethod: onlineState.payMethod,          // v20260603-v2：客人選的付款別（回饋點數依據）
     pointsRequested: pointsRequested,          // v20260603-v2：要折抵的點數（POS 接單以真實餘額為上限預扣）
+    payCashDiscount: payCashDiscount,
     total: grandTotal
   };
 
