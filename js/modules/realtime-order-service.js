@@ -767,10 +767,12 @@ export async function syncMenuToFirebase(){
     category: p.category,
     image: p.image || '',
     description: p.description || '',
-    modules: p.modules || [],
+    modules: p.modules || [], 
     sortOrder: p.sortOrder || 0,
-    enabled: p.enabled !== false,
+    sizes: Array.isArray(p.sizes) ? p.sizes.map(s => ({ name: String(s.name||'').trim(), price: Number(s.price||0) })) : [],
+    enabled: p.enabled !== false, 
     soldOut: p.soldOut === true
+
   };
 }),
     modules: state.modules || [],
@@ -937,7 +939,9 @@ function applyCloudMenu(data){
         category: cp.category || '未分類', image: cp.image || '',
         description: cp.description || '',
         modules: Array.isArray(cp.modules) ? cp.modules : [],
+        sizes: Array.isArray(cp.sizes) ? cp.sizes : (lp && Array.isArray(lp.sizes) ? lp.sizes : []),
         sortOrder: Number(cp.sortOrder || 0), enabled, soldOut
+
       });
       usedIds.add(cp.id);
     });
@@ -960,10 +964,9 @@ export async function watchMenuFromFirebase(callback){
   dbApi.onValue(menuRef, (snapshot) => {
     const data = snapshot.val();
     if(!data) return;
-    if(Array.isArray(data.products)) state.products = data.products;
-    if(Array.isArray(data.modules))  state.modules  = data.modules;
-    if(Array.isArray(data.categories)) state.categories = data.categories;
+    applyCloudMenu(data);
     if(callback) callback(data);
+
   });
 }
 
