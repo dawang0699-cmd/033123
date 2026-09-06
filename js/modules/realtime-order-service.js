@@ -654,7 +654,8 @@ export function buildRealtimeOrderForPOS(remote){
   const remoteCouponCode = String(remote.couponCode || '').toUpperCase();
   const payCashDiscount = Math.max(0, Number(remote.payCashDiscount || 0));
   const remoteCouponMessage = String(remote.couponMessage || '');
-  const grandTotal = Math.max(0, subtotal - remoteDiscount);
+  const grandTotal = Math.max(0, subtotal - remconst grandTotal = Math.max(0, subtotal - remoteDiscount - payCashDiscount);
+oteDiscount);
 
 
 
