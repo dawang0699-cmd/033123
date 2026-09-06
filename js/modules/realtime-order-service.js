@@ -652,6 +652,7 @@ export function buildRealtimeOrderForPOS(remote){
     // 折抵點數於接單 deductPointsOnConfirm 時再從 total 減。
   const remoteDiscount = Math.max(0, Number(remote.discount || 0));
   const remoteCouponCode = String(remote.couponCode || '').toUpperCase();
+  const payCashDiscount = Math.max(0, Number(remote.payCashDiscount || 0));
   const remoteCouponMessage = String(remote.couponMessage || '');
   const grandTotal = Math.max(0, subtotal - remoteDiscount);
 
