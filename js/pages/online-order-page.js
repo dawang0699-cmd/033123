@@ -1045,8 +1045,14 @@ function renderMyOrdersList(list){
     const created = o.createdAt ? fmtLocalDateTime(o.createdAt) : '';
     const resv = o.reservationAt ? `<div style="color:#10b981;font-size:13px">📅 預約取餐：${fmtLocalDateTime(o.reservationAt)}</div>` : '';
     const itemsText = Array.isArray(o.items)
-      ? o.items.map(it => `${it.name} x${it.qty}`).join('、')
-      : '';
+    ? o.items.map(it => {
+        const lineTotal = (Number(it.basePrice || 0) + Number(it.extraPrice || 0)) * Number(it.qty || 0);
+        return `<div style="display:flex;justify-content:space-between">`
+             + `<span>${escapeHtml(it.name)} x${it.qty}</span>`
+             + `<span>$${lineTotal}</span>`
+             + `</div>`;
+      }).join('')
+    : '';
     const reply = o.replyMessage ? `<div style="font-size:12px;color:#475569;margin-top:4px">店家訊息：${o.replyMessage}</div>` : '';
     return `
       <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:#fff">
