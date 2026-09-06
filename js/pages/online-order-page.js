@@ -716,7 +716,15 @@ async function submitOnlineOrder(){
 
     const { signInCustomerAnonymously } = await import('../modules/realtime-order-service.js');
         await signInCustomerAnonymously();
-    const stopWatch = await watchCustomerOrder(orderId, (remote)=>{
+        let _pollTimer = null;
+    let _stopWatch = null;
+    function _finishWatch(){
+      try{ if(_stopWatch) _stopWatch(); }catch(e){}
+      if(_pollTimer){ clearInterval(_pollTimer); _pollTimer = null; }
+      window.removeEventListener('beforeunload', onlineState._cleanupWatch);
+      onlineState._cleanupWatch = null;
+    }
+    function applyRemoteStatus(remote){
       if(!remote) return;
       if(remote.status === 'confirmed'){
         onlineState.cart = [];
@@ -724,22 +732,32 @@ async function submitOnlineOrder(){
         closeCartDrawer();
         document.getElementById('onlineCustomerNote').value = '';
         openStatusOverlay('店家已確認訂單', buildConfirmedMessage(remote, orderId), true);
-        try{ stopWatch(); }catch(e){}
-        window.removeEventListener('beforeunload', onlineState._cleanupWatch);
-        onlineState._cleanupWatch = null;
+        _finishWatch();
       }else if(remote.status === 'rejected'){
         openStatusOverlay('店家已拒絕訂單', remote.replyMessage || '很抱歉，店家目前無法接單，請稍後再試。', true);
-        try{ stopWatch(); }catch(e){}
-        window.removeEventListener('beforeunload', onlineState._cleanupWatch);
-        onlineState._cleanupWatch = null;
+        _finishWatch();
       }else{
         const pendingText = remote.replyMessage || '訂單已送出，請稍候店家確認。';
         openStatusOverlay('等待店家確認訂單', pendingText);
       }
-    }, onlineState.storeCode);
+    }
+    _stopWatch = await watchCustomerOrder(orderId, applyRemoteStatus, onlineState.storeCode);
     // 頁面關閉時自動解除監聽，避免記憶體洩漏
-    onlineState._cleanupWatch = ()=>{ try{ stopWatch(); }catch(e){} };
+    onlineState._cleanupWatch = ()=>{ _finishWatch(); };
     window.addEventListener('beforeunload', onlineState._cleanupWatch);
+
+    // v20260906：背景凍結備援 — 每 30 秒主動補讀最新狀態（仿 startMenuAutoWatch 輪詢）
+    // 手機切背景使 onValue 長連線被凍結時，回前景後最多 30 秒內補回最新 status，避免卡在待接單
+    const rt = await import('../modules/realtime-order-service.js');
+    _pollTimer = setInterval(async ()=>{
+      try{
+        const ref = await rt._getRef(`onlineOrders/${onlineState.storeCode}/${orderId}`);
+        const snap = await rt._dbApi().get(ref);
+        const remote = snap.val();
+        if(remote) applyRemoteStatus(remote);
+      }catch(e){ /* 靜默 */ }
+    }, 30000);
+
   }catch(err){
 
     closeStatusOverlay();
