@@ -211,7 +211,7 @@ export function normalizePromotionsConfig(input){
     if(['amount','percent'].indexOf(type) < 0) type = 'amount';
     var code = cleanCode(c.code);
     if(!code) return;
-        out.coupons.push({
+            out.coupons.push({
       id: cleanText(c.id || uid('coupon'), 48),
       enabled: c.enabled !== false,
       showToCustomer: c.showToCustomer !== false,
@@ -220,10 +220,10 @@ export function normalizePromotionsConfig(input){
       type: type,
       value: asMoney(c.value),
       minSpend: asMoney(c.minSpend),
+      rewardMode: (c.rewardMode === 'cash' ? 'cash' : 'points'),
       startsAt: cleanText(c.startsAt || '', 40),
       endsAt: cleanText(c.endsAt || '', 40)
     });
-
   });
   if(!out.banners.length && !hasOwn(src, 'banners')) out.banners = base.banners;
   return out;
