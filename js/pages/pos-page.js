@@ -480,8 +480,17 @@ if(order){
         catch(e) { console.error('列印號碼單失敗:', e); }
     }
 }
- alert(paymentMethod === '待付款' ? '仍維持待付款' : '已完成收款');
+      if(paymentMethod === '待付款'){
+        showToast('已加入待付款', 500);
+      } else if(paymentMethod === '現金' && _cashReceived !== ''){
+        var _recv = Number(_cashReceived) || 0;
+        var _change = Math.max(0, _recv - _cashDue);
+        alert('已完成收款\n實收 $' + _recv + '　找零 $' + _change);
+      } else {
+        alert('已完成收款');
+      }
       return;
+
     }
 
     order = createOrUpdateOrder(paymentMethod);
@@ -511,9 +520,8 @@ if(order){
         catch(e) { console.error('列印號碼單失敗:', e); }
     }
 }
-
-                if(paymentMethod === '待付款'){
-          alert('已加入待付款');
+  if(paymentMethod === '待付款'){
+          showToast('已加入待付款', 500);
         } else if(paymentMethod === '現金' && _cashReceived !== ''){
           var _recv = Number(_cashReceived) || 0;
           var _change = Math.max(0, _recv - _cashDue);
@@ -1019,6 +1027,16 @@ async function refreshPosLockState(){
 
   // 第 3 層：已登入且已開班
   lock.style.display = 'none';
+}
+// 浮動提示：顯示 ms 毫秒後自動消失，不需手動按確定
+function showToast(msg, ms){
+  var t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);'
+    + 'background:rgba(15,23,42,0.92);color:#fff;padding:14px 26px;border-radius:12px;'
+    + 'font-size:16px;z-index:99999;box-shadow:0 10px 30px rgba(0,0,0,0.3);pointer-events:none';
+  document.body.appendChild(t);
+  setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, ms || 500);
 }
 
 
