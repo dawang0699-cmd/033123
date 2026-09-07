@@ -805,7 +805,7 @@ async function init(){
   let menuLoaded = false;
   for(let attempt = 1; attempt <= 3 && !menuLoaded; attempt++){
     try{
-      await fetchMenuFromFirebase();
+      await fetchMenuFromFirebase(onlineState.storeCode);
       menuLoaded = true;
     }catch(err){
       console.warn(`讀取雲端菜單失敗（第 ${attempt} 次）：`, err);
@@ -837,7 +837,7 @@ async function init(){
       if(document.getElementById('onlineOrderType')?.value === '預約'){
         renderReservationSlots();
       }
-    });
+    }, onlineState.storeCode);
     }catch(err){
     console.warn('啟動菜單監聽失敗（不影響顯示）：', err);
   }
