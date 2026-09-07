@@ -125,6 +125,26 @@ function getSizeSuffix(product){
   if(i >= 0 && sizes[i] && sizes[i].name) return '(' + sizes[i].name + ')';
   return '';
 }
+// v20260907 購物車本地暫存：依 storeCode 分開存，重整/閃退可還原，直到結帳成功或清空
+function cartStorageKey(){
+  return 'online_cart_' + (onlineState.storeCode || 'default');
+}
+function saveCartToStorage(){
+  try{
+    localStorage.setItem(cartStorageKey(), JSON.stringify(onlineState.cart || []));
+  }catch(e){ /* 隱私模式或空間滿時略過 */ }
+}
+function loadCartFromStorage(){
+  try{
+    const raw = localStorage.getItem(cartStorageKey());
+    if(!raw) return;
+    const arr = JSON.parse(raw);
+    if(Array.isArray(arr)) onlineState.cart = arr;
+  }catch(e){ /* 壞資料略過 */ }
+}
+function clearCartStorage(){
+  try{ localStorage.removeItem(cartStorageKey()); }catch(e){}
+}
 
 function sameSelections(a=[], b=[]){
   if(a.length !== b.length) return false;
@@ -353,6 +373,7 @@ function renderCart(){
   document.getElementById('onlineTotalQtyText').textContent = String(totalQty);
     document.getElementById('openCartBtn').innerHTML = `購物車 <span id="cartQtyBadge">${totalQty}</span>`;
   updateFloatingCartBadge();
+  saveCartToStorage();
 
     if(typeof window.__refreshOnlinePromotion === 'function') window.__refreshOnlinePromotion();
     // v20260603-v2：購物車變動 → 重算折扣/折抵上限/可得點數/應付合計
@@ -728,6 +749,7 @@ async function submitOnlineOrder(){
       if(!remote) return;
       if(remote.status === 'confirmed'){
         onlineState.cart = [];
+        clearCartStorage();
         renderCart();
         closeCartDrawer();
         document.getElementById('onlineCustomerNote').value = '';
@@ -776,6 +798,7 @@ async function init(){
     return;
   }
   onlineState.storeCode = code;
+  loadCartFromStorage();
 
   // 顧客端不需做雲端備份（那是 POS 主機的功能），關掉避免每 10 秒噴 PERMISSION_DENIED
   try{
