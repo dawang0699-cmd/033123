@@ -512,7 +512,7 @@ if(order){
     // 號碼單：現場訂單依開關列印（號碼=訂單號碼後三碼）
     if(paymentMethod !== '待付款' && printConfig.autoPrintNumberTicket){
         try { printNumberTicket(order); }
-        catch(e) { console.error('列印號碼單失敗:', e); 
+        catch(e) { console.error('列印號碼單失敗:', e);  }
     }
 }
   if(paymentMethod === '待付款'){
