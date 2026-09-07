@@ -1347,8 +1347,8 @@
       <h2 style="margin:0; font-size:20px; color:#0f172a;">收到新的線上訂單！</h2>
     </div>
 
-    <!-- 訂單資訊（與原本卡片相同） -->
-    <div style="border:2px solid #f59e0b; border-radius:12px; padding:16px; background:#fffbeb;">
+    <!-- 訂單資訊（固定佔視窗 70%，內容過多時內部捲動） -->
+    <div style="border:2px solid #f59e0b; border-radius:12px; padding:16px; background:#fffbeb; width:70vw; height:70vh; box-sizing:border-box; overflow-y:auto;">
       <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
         <div>
           <span id="overlayOrderNo" style="font-weight:bold; font-size:15px;"></span>
@@ -1382,6 +1382,7 @@
     </div>
   </div>
 </div>
+
 <style>
 @keyframes pulse-ring {
   0%{box-shadow:0 0 0 0 rgba(245,158,11,0.6);}
