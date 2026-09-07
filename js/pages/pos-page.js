@@ -512,8 +512,17 @@ if(order){
     }
 }
 
-        alert(paymentMethod === '待付款' ? '已加入待付款' : '結帳完成');
+                if(paymentMethod === '待付款'){
+          alert('已加入待付款');
+        } else if(paymentMethod === '現金' && _cashReceived !== ''){
+          var _recv = Number(_cashReceived) || 0;
+          var _change = Math.max(0, _recv - _cashDue);
+          alert('結帳完成\n實收 $' + _recv + '　找零 $' + _change);
+        } else {
+          alert('結帳完成');
+        }
 }
+
 
 // ============================================================
 // v20260620 現金收款視窗（自製鍵盤，全程不調用系統鍵盤）
