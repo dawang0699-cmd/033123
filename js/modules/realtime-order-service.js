@@ -757,7 +757,7 @@ export async function syncMenuToFirebase(){
   if(!user) throw new Error('請先使用 POS Google 登入');
   await verifyPOSAccess();
 
-  const menuKey = cfg.projectId || 'default';
+  const menuKey = getStoreCode();
   const menuData = {
     categories: state.categories || [],
     products: (state.products || []).filter(function(p){ return p.onlineVisible !== false; }).map(function(p){
@@ -790,11 +790,11 @@ export async function syncMenuToFirebase(){
 }
 
 
-export async function fetchMenuFromFirebase(){
+export async function fetchMenuFromFirebase(storeCode){
   await loadFirebaseModules();
   const cfg = ensureRealtimeConfig();
-  const menuKey = cfg.projectId || 'default';
-  const menuRef = await getRef('menu/' + menuKey);
+  const code = storeCode ? validateStoreCode(storeCode) : getStoreCode();
+  const menuRef = await getRef('menu/' + code);
   const snapshot = await dbApi.get(menuRef);
   const data = snapshot.val();
   if(!data) throw new Error('雲端尚無菜單資料，請先在 POS 同步菜單到雲端');
@@ -811,11 +811,11 @@ export async function fetchMenuFromFirebase(){
 }
 
 
-export async function fetchAndMergeMenuFromFirebase(){
+export async function fetchAndMergeMenuFromFirebase(storeCode){
 
   await loadFirebaseModules();
   const cfg = ensureRealtimeConfig();
-  const menuKey = cfg.projectId || 'default';
+  const menuKey = storeCode ? validateStoreCode(storeCode) : getStoreCode();
   const menuRef = await getRef('menu/' + menuKey);
   const snapshot = await dbApi.get(menuRef);
   const data = snapshot.val();
@@ -882,10 +882,10 @@ export async function fetchAndMergeMenuFromFirebase(){
 
 let menuWatchUnsub = null;
 let menuPollTimer = null;
-export async function startMenuAutoWatch(onUpdate){
+export async function startMenuAutoWatch(callback, storeCode){
   await loadFirebaseModules();
   const cfg = ensureRealtimeConfig();
-  const menuKey = cfg.projectId || 'default';
+  const menuKey = storeCode ? validateStoreCode(storeCode) : getStoreCode();
   const menuRef = await getRef('menu/' + menuKey);
 
   if(menuWatchUnsub){ try{ menuWatchUnsub(); }catch(e){} menuWatchUnsub = null; }
@@ -896,7 +896,7 @@ export async function startMenuAutoWatch(onUpdate){
     if(!data) return;
     try {
       applyCloudMenu(data);
-      if(typeof onUpdate === 'function') onUpdate();
+if(typeof callback === 'function') callback();
     } catch(e){ console.warn('menu watch handler failed:', e); }
   };
   dbApi.onValue(menuRef, handler);
@@ -906,7 +906,8 @@ export async function startMenuAutoWatch(onUpdate){
     try{
       const snap = await dbApi.get(menuRef);
       const data = snap.val();
-      if(data){ applyCloudMenu(data); if(typeof onUpdate === 'function') onUpdate(); }
+      if(data){ applyCloudMenu(data); if(typeof callback === 'function') callback();
+ }
     }catch(e){ /* 靜默 */ }
   }, 30000);
 }
@@ -963,7 +964,7 @@ export function stopMenuAutoWatch(){
 export async function watchMenuFromFirebase(callback){
   await loadFirebaseModules();
   const cfg = ensureRealtimeConfig();
-  const menuKey = cfg.projectId || 'default';
+  const menuKey = getStoreCode();
   const menuRef = await getRef('menu/' + menuKey);
   dbApi.onValue(menuRef, (snapshot) => {
     const data = snapshot.val();
