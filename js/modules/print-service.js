@@ -811,8 +811,35 @@ export async function printNumberTicket(order){
   const html = getNumberTicketHtml(order);
   await detectPrinters(true);
   const d = getDetect();
+
+  // T2 / Chrome 8080 橋接：走 http，送 APK 印（與顧客單同一條路，不再掉到瀏覽器 PDF）
+  if(d && d.mode === 'http'){
+    const payload = {
+      mode: 'number',
+      openDrawer: false,
+      shopName: '',
+      subtitle: '',
+      // 把號碼塞進 items 那一行，關掉數量與價格欄，避免印出 x1 $0
+      items: [{ name: no, qty: 1, price: 0 }],
+      fields: {
+        storeName:false, subtitle:false, items:true,
+        itemQty:false, itemPrice:false, itemSelections:false, itemNote:false,
+        storePhone:false, storeAddress:false, orderNo:false, dateTime:false,
+        orderType:false, paymentMethod:false, customerInfo:false,
+        customerNote:false, orderNote:false, subtotal:false, discount:false,
+        total:false, footer:false
+      },
+      // 號碼放大字級（APK 支援就放大，不支援則忽略）
+      fontKitchenItem: 96,
+      fontKitchenInfo: 24
+    };
+    const rr = await routedHttpPrint('label', payload, d);
+    if(rr.ok) return { route: rr.route, ok:true };
+    // http 失敗才往下退回
+  }
+
+  // Sunmi 內建（webview）
   if(d && d.mode === 'webview'){
-    // Sunmi 走大字直印
     if(hasSunmi() && typeof window.SunmiPrinter.printTextWithFont === 'function'){
       try{
         window.SunmiPrinter.printTextWithFont('\n' + no + '\n\n', '', 72);
@@ -821,10 +848,10 @@ export async function printNumberTicket(order){
       }catch(e){}
     }
   }
+
   await bridgeBrowserPrint(html);
   return { route:'browser', ok:true };
 }
-
 // ============================================================
 // 錢箱
 // ============================================================
