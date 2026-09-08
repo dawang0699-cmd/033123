@@ -755,7 +755,7 @@ function calcReportData(session){
     if(i.productId === '_discount_') return;
     prodMap[i.name] = (prodMap[i.name]||0) + Number(i.qty||0);
   }));
-  const top = Object.entries(prodMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const top = Object.entries(prodMap).sort((a,b)=>b[1]-a[1]);
 
   const hourMap = {};
   orders.forEach(o => {
