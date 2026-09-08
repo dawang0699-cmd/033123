@@ -1338,50 +1338,48 @@
 <!-- 線上訂單全螢幕通知 -->
 <div id="onlineOrderOverlay" onclick="if(event.target===this){this.style.display='none';}"
  style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.85); align-items:center; justify-content:center; flex-direction:column;">
-  <!-- 頂部提示 -->
     <div style="text-align:center; margin-bottom:16px;">
-      <div id="overlayPulse" style="width:60px; height:60px; margin:0 auto 12px; border-radius:50%; background:#f59e0b; 
+      <div id="overlayPulse" style="width:60px; height:60px; margin:0 auto 12px; border-radius:50%; background:#f59e0b;
         animation:pulse-ring 1.5s infinite; display:flex; align-items:center; justify-content:center;">
         <span style="font-size:28px;">🔔</span>
       </div>
       <h2 style="margin:0; font-size:20px; color:#0f172a;">收到新的線上訂單！</h2>
     </div>
 
-    <!-- 訂單資訊（固定佔視窗 70%，內容過多時內部捲動） -->
-    <div style="border:2px solid #f59e0b; border-radius:12px; padding:16px; background:#fffbeb; width:70vw; height:70vh; box-sizing:border-box; overflow-y:auto;">
-      <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
+    <div style="border:2px solid #f59e0b; border-radius:12px; padding:16px; background:#fffbeb; width:70vw; max-height:85vh; box-sizing:border-box; display:flex; flex-direction:column;">
+      <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px; flex:0 0 auto;">
         <div>
           <span id="overlayOrderNo" style="font-weight:bold; font-size:15px;"></span>
           <span style="background:#f59e0b; color:#fff; font-size:12px; padding:2px 8px; border-radius:4px; margin-left:8px;">待確認</span>
         </div>
         <span id="overlayTotal" style="font-size:18px; font-weight:bold; color:#ef4444;"></span>
       </div>
-      <div id="overlayMeta" style="font-size:13px; color:#64748b; margin-bottom:4px;"></div>
-      <div id="overlayCustomer" style="font-size:13px; color:#64748b; margin-bottom:12px;"></div>
+      <div id="overlayMeta" style="font-size:13px; color:#64748b; margin-bottom:4px; flex:0 0 auto;"></div>
+      <div id="overlayCustomer" style="font-size:13px; color:#64748b; margin-bottom:12px; flex:0 0 auto;"></div>
 
-      <!-- 品項列表 -->
-      <div id="overlayItems" style="margin-bottom:16px; font-size:14px; color:#334155;"></div>
+      <!-- 品項列表：內容多時這區自己縮，不捲動 -->
+      <div id="overlayItems" style="margin-bottom:16px; font-size:14px; color:#334155; flex:1 1 auto; min-height:0;"></div>
 
-      <!-- 備餐時間 -->
-      <div style="margin-bottom:12px;">
+      <!-- 備餐時間：固定 -->
+      <div style="margin-bottom:12px; flex:0 0 auto;">
         <label style="font-size:14px; font-weight:600; color:#334155;">備餐時間（分鐘）</label>
         <input type="number" id="overlayPrepTime" value="20" style="width:100%; padding:10px; margin-top:4px; border:1px solid #cbd5e1; border-radius:8px; font-size:16px; box-sizing:border-box;" />
       </div>
 
-      <!-- 回覆顧客訊息 -->
-      <div style="margin-bottom:16px;">
+      <!-- 回覆顧客訊息：固定 -->
+      <div style="margin-bottom:16px; flex:0 0 auto;">
         <label style="font-size:14px; font-weight:600; color:#334155;">回覆顧客訊息</label>
         <input type="text" id="overlayMessage" placeholder="例如：大約 20 分鐘後可取餐" style="width:100%; padding:10px; margin-top:4px; border:1px solid #cbd5e1; border-radius:8px; font-size:16px; box-sizing:border-box;" />
       </div>
 
-      <!-- 按鈕 -->
-      <div style="display:flex; gap:12px;">
+      <!-- 按鈕：固定 -->
+      <div style="display:flex; gap:12px; flex:0 0 auto;">
         <button id="overlayAcceptBtn" style="flex:1; padding:14px; font-size:16px; font-weight:bold; border:none; border-radius:10px; background:#3b82f6; color:#fff; cursor:pointer;">確認接單</button>
         <button id="overlayRejectBtn" style="flex:1; padding:14px; font-size:16px; font-weight:bold; border:none; border-radius:10px; background:#fff; color:#ef4444; border:2px solid #ef4444; cursor:pointer;">拒絕訂單</button>
       </div>
     </div>
-  </div>
 </div>
+
 
 <style>
 @keyframes pulse-ring {
@@ -1390,9 +1388,6 @@
   100%{box-shadow:0 0 0 0 rgba(245,158,11,0);}
 }
 </style>
-
-  
-
 
 </body>
 </html>
