@@ -239,9 +239,14 @@ if(sizes.length){
   sizeBlock.innerHTML = '<div class="config-module-title">份量</div>';
   const sizeList = document.createElement('div');
   sizeList.className = 'config-options';
-  sizes.forEach((sz, idx) => {
+    sizes.forEach((sz, idx) => {
     const b = document.createElement('button');
-    b.className = 'option-btn' + (onlineState.currentSizeIndex === idx ? ' active' : '');
+    b.className = 'option-btn';
+    const on = (onlineState.currentSizeIndex === idx);
+    b.style.border = on ? '2px solid #2563eb' : '1px solid #cbd5e1';
+    b.style.background = on ? '#2563eb' : '#fff';
+    b.style.color = on ? '#fff' : '#0f172a';
+    b.style.fontWeight = on ? '700' : '400';
     b.textContent = sz.name + '（$' + Number(sz.price||0) + '）';
     b.onclick = () => {
       onlineState.currentSizeIndex = (onlineState.currentSizeIndex === idx ? -1 : idx);
@@ -249,6 +254,7 @@ if(sizes.length){
     };
     sizeList.appendChild(b);
   });
+
   sizeBlock.appendChild(sizeList);
   wrap.appendChild(sizeBlock);
 }
