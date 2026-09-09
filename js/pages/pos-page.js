@@ -469,11 +469,13 @@ if(order){
         try { printOrderReceipt(order, 'customer'); }
         catch(e) { console.error('列印顧客單失敗:', e); }
     }
-    // 號碼單：現場訂單依開關列印（號碼=訂單號碼後三碼）
-  if(paymentMethod !== '待付款' && printConfig.autoPrintNumberTicket){
+        // 號碼單：現場訂單依開關列印；線上訂單一律不印號碼單
+  if(paymentMethod !== '待付款' && printConfig.autoPrintNumberTicket
+       && !(String(order.id).startsWith('online_') || order.orderType === '線上點餐')){
         try { printNumberTicket(order); }
         catch(e) { console.error('列印號碼單失敗:', e); }
     }
+
 }
       if(paymentMethod === '待付款'){
         showToast('已加入待付款', 500);
@@ -509,11 +511,12 @@ if(order){
         try { printOrderReceipt(order, 'customer'); }
         catch(e) { console.error('列印顧客單失敗:', e); }
     }
-    // 號碼單：現場訂單依開關列印（號碼=訂單號碼後三碼）
-    if(paymentMethod !== '待付款' && printConfig.autoPrintNumberTicket){
+       // 號碼單：現場訂單依開關列印（號碼=訂單號碼後三碼）
+  if(paymentMethod !== '待付款' && printConfig.autoPrintNumberTicket){
         try { printNumberTicket(order); }
-        catch(e) { console.error('列印號碼單失敗:', e);  }
+        catch(e) { console.error('列印號碼單失敗:', e); }
     }
+
 }
   if(paymentMethod === '待付款'){
           showToast('已加入待付款', 500);
