@@ -378,7 +378,16 @@ export async function signInPOSWithGoogle(){
   const result = await authApi.signInWithPopup(authInstance, googleProvider);
   return result.user;
 }
-
+// ▼▼▼ 新增：email + 密碼登入（取代 Google，WebView 相容）▼▼▼
+export async function signInPOSWithEmail(email, password){
+  await loadFirebaseModules();
+  const mail = String(email || '').trim();
+  const pass = String(password || '');
+  if(!mail || !pass) throw new Error('請輸入 email 與密碼');
+  const result = await authApi.signInWithEmailAndPassword(authInstance, mail, pass);
+  return result.user;
+}
+// ▲▲▲ 新增結束 ▲▲▲
 export async function signOutPOSGoogle(){
   await loadFirebaseModules();
   await authApi.signOut(authInstance);
