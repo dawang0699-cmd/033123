@@ -241,6 +241,23 @@ window.fetchMenuFromCloud = async function(triggerBtn){
   }
 };
 
+// 即時接單專用：讀總部範本菜單 menu/store001（上下架保留本機）
+window.fetchTemplateMenuFromCloud = async function(triggerBtn){
+  const btn = triggerBtn || document.getElementById('fetchMenuBtn');
+  const originalText = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = '讀取中...'; }
+  try{
+    const mod = await import('./modules/realtime-order-service.js');
+    const result = await mod.fetchTemplateMenuFromHQ();
+    window.refreshAllViews();
+    window.refreshRealtimeOrderPanel();
+    if(btn){ btn.textContent = `✓ 已讀範本（雲端 ${result.cloudCount} / 本地保留 ${result.localKeptCount}）`; setTimeout(()=>{ btn.textContent = originalText; btn.disabled = false; }, 2500); }
+    else alert(`讀取總部範本成功，雲端 ${result.cloudCount} 筆 / 本地保留 ${result.localKeptCount} 筆`);
+  }catch(err){
+    if(btn){ btn.textContent = originalText; btn.disabled = false; }
+    alert('讀取範本菜單失敗：' + (err.message || err));
+  }
+};
 
 // ============================================================
 // 即時接單重新初始化（儲存設定後呼叫）
