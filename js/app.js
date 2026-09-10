@@ -16,6 +16,7 @@ import {
   startPOSRealtimeListener,
   waitForAuthReady,
   signInPOSWithGoogle,
+  signInPOSWithEmail,
   signOutPOSGoogle,
   syncMenuToFirebase,
   verifyPOSAccess,
@@ -151,16 +152,26 @@ window.refreshGoogleBackupPanel = function(){
 // ============================================================
 window.posGoogleLogin = async function(){
   try{
-    const user = await signInPOSWithGoogle();
+    // 從登入畫面的 email / 密碼欄位取值（HTML 需有 id="posLoginEmail"、id="posLoginPassword"）
+    const emailEl = document.getElementById('posLoginEmail');
+    const passEl  = document.getElementById('posLoginPassword');
+    const email = emailEl ? emailEl.value.trim() : '';
+    const password = passEl ? passEl.value : '';
+    if(!email || !password){
+      alert('請輸入 email 與密碼');
+      return;
+    }
+
+    const user = await signInPOSWithEmail(email, password);
     const accountBox = document.getElementById('posGoogleAccountBox');
-    if(accountBox) accountBox.textContent = 'POS 登入帳號：' + (user.email || user.displayName || '已登入');
+    if(accountBox) accountBox.textContent = 'POS 登入帳號：' + (user.email || '已登入');
 
     // 驗證 staff 權限
     try{
       await verifyPOSAccess();
-      alert('Google 登入成功：' + (user.email || ''));
+      alert('登入成功：' + (user.email || ''));
     }catch(verifyErr){
-      alert('Google 登入成功，但 ' + verifyErr.message);
+      alert('登入成功，但 ' + verifyErr.message);
       window.refreshRealtimeOrderPanel();
       return;
     }
@@ -177,7 +188,7 @@ window.posGoogleLogin = async function(){
     window.refreshRealtimeOrderPanel();
     window.refreshAllViews();
   }catch(err){
-    alert('Google 登入失敗：' + err.message);
+    alert('登入失敗：' + err.message);
   }
 };
 
