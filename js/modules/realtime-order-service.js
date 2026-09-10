@@ -932,11 +932,12 @@ export async function fetchAndMergeMenuFromFirebase(storeCode){
     localProds.forEach(p => { if(p && p.id) localMap[p.id] = p; });
     const merged = [];
     const usedIds = new Set();
-    data.products.forEach(cp => {
+        data.products.forEach(cp => {
       if(!cp || !cp.id) return;
       const lp = localMap[cp.id];
-      const enabled = lp ? (lp.enabled !== false) : (cp.enabled !== false);
-      const soldOut = lp ? (lp.soldOut === true) : (cp.soldOut === true);
+      // 菜單管理讀取：上下架 / 售完 一律以雲端（自己 storeId 上次上傳）為準
+      const enabled = (cp.enabled !== false);
+      const soldOut = (cp.soldOut === true);
       merged.push({
         id: cp.id,
         sku: cp.sku || '', 
