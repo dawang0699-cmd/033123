@@ -130,6 +130,13 @@ function fmtDate(s){
   const mm = String(d.getMinutes()).padStart(2,'0');
   return `${y}-${m}-${day} ${hh}:${mm}`;
 }
+// 預約取餐時間：有 reservationAt 或 orderType 為「預約」時回傳格式化字串，否則空字串
+function getReservationText(order){
+  if(!order) return '';
+  const r = order.reservationAt || order.reservationSlot || '';
+  if(!r) return '';
+  return fmtDate(r);
+}
 
 function sunmiPrintReceiptByFont(order, mode){
   if(!hasSunmi() || typeof window.SunmiPrinter.printTextWithFont !== 'function') return false;
@@ -376,6 +383,9 @@ export function getReceiptHtml(order, mode){
     const tableInfo = order.tableNo ? ` / ${escapeHtml(order.tableNo)}` : '';
     lines.push(`<div>類型：${escapeHtml(order.orderType || '')}${tableInfo}</div>`);
   }
+  // 預約單：顯示預約取餐時間（顧客單、廚房單都印）
+  const _resvText = getReservationText(order);
+  if(_resvText) lines.push(`<div class="bold">預約取餐：${escapeHtml(_resvText)}</div>`);
   if(fields.customerInfo){
     const cName = order.customerName ? escapeHtml(order.customerName) : '';
     const cPhone = customerPhoneMasked ? escapeHtml(customerPhoneMasked) : '';
@@ -614,10 +624,8 @@ function buildBridgePayload(order, mode){
     // 訂單資訊
     orderNumber: fields.orderNo  ? String(order.orderNo || order.id || '') : '',
     dateTime:    fields.dateTime ? fmtDate(order.createdAt) : '',
-    orderType:   fields.orderType
-                   ? ((order.orderType || '') + (order.tableNo ? ' / ' + order.tableNo : '')).trim()
-                   : '',
-    tableNo: order.tableNo || '',
+    orderType:   fields.orderType? (((order.orderType || '') + (order.tableNo ? ' / ' + order.tableNo : '')).trim()+ (getReservationText(order) ? '　取餐:' + getReservationText(order) : '')): (getReservationText(order) ? '取餐:' + getReservationText(order) : ''),
+
 
     // 付款方式（僅顧客單）
     paymentMethod: (fields.paymentMethod && !isKitchen && !isLabel)
