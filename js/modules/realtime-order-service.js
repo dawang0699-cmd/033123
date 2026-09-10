@@ -818,6 +818,82 @@ export async function fetchMenuFromFirebase(storeCode){
   }
   return data;
 }
+// ============================================================
+// 即時接單：讀「總部範本菜單」menu/store001（寫死，例外路徑）
+// 只更新品項名稱/價格/模組等基本資訊；上下架 enabled、售完 soldOut 一律保留本機，不被範本覆蓋。
+// 註：跨店路徑原則上用 storeId，但「總部統一範本」是刻意的例外，請勿改回 getStoreCode()。
+// ============================================================
+const HQ_TEMPLATE_STORE = 'store001';
+export async function fetchTemplateMenuFromHQ(){
+  await loadFirebaseModules();
+  const menuRef = await getRef('menu/' + HQ_TEMPLATE_STORE);
+  const snapshot = await dbApi.get(menuRef);
+  const data = snapshot.val();
+  if(!data) throw new Error('雲端尚無總部範本菜單（menu/' + HQ_TEMPLATE_STORE + '）');
+
+  let cloudCount = 0;
+  let localKeptCount = 0;
+
+  // 分類：以範本為主，本地獨有的補在後面
+  if(Array.isArray(data.categories)){
+    const localCats = state.categories || [];
+    const merged = [...data.categories];
+    localCats.forEach(c => { if(!merged.includes(c)) merged.push(c); });
+    if(!merged.includes('未分類')) merged.unshift('未分類');
+    state.categories = merged;
+  }
+
+  // 模組：以範本為主，本地獨有的保留
+  if(Array.isArray(data.modules)){
+    const localMods = state.modules || [];
+    const merged = [];
+    const usedIds = new Set();
+    data.modules.forEach(m => { if(m && m.id){ merged.push(m); usedIds.add(m.id); }});
+    localMods.forEach(m => { if(m && m.id && !usedIds.has(m.id)){ merged.push(m); localKeptCount++; }});
+    state.modules = merged;
+  }
+
+  // 商品：更新品項基本資訊，但 enabled / soldOut 一律保留本機
+  if(Array.isArray(data.products)){
+    const localProds = state.products || [];
+    const localMap = {};
+    localProds.forEach(p => { if(p && p.id) localMap[p.id] = p; });
+    const merged = [];
+    const usedIds = new Set();
+    data.products.forEach(cp => {
+      if(!cp || !cp.id) return;
+      const lp = localMap[cp.id];
+      // 關鍵：上下架 / 售完 一律用本機值（本機沒有這筆才用範本預設）
+      const enabled = lp ? (lp.enabled !== false) : (cp.enabled !== false);
+      const soldOut = lp ? (lp.soldOut === true) : (cp.soldOut === true);
+      merged.push({
+        id: cp.id,
+        sku: cp.sku || '',
+        name: cp.name || '',
+        price: Number(cp.price || 0),
+        category: cp.category || '未分類',
+        image: cp.image || '',
+        description: cp.description || '',
+        modules: Array.isArray(cp.modules) ? cp.modules : [],
+        sortOrder: Number(cp.sortOrder || 0),
+        sizes: Array.isArray(cp.sizes) ? cp.sizes : (lp && Array.isArray(lp.sizes) ? lp.sizes : []),
+        enabled,
+        soldOut
+      });
+      usedIds.add(cp.id);
+      cloudCount++;
+    });
+    // 本機獨有、範本沒有的商品：整筆保留
+    localProds.forEach(p => { if(p && p.id && !usedIds.has(p.id)){ merged.push(p); localKeptCount++; }});
+    state.products = merged;
+  }
+
+  const cfg = ensureRealtimeConfig();
+  cfg.lastSyncStatus = `已讀取總部範本菜單：雲端 ${cloudCount} / 本地保留 ${localKeptCount}（上下架維持本機）`;
+  cfg.lastSyncTime = new Date().toISOString();
+  persistAll();
+  return { cloudCount, localKeptCount };
+}
 
 
 export async function fetchAndMergeMenuFromFirebase(storeCode){
