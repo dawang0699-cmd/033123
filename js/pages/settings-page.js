@@ -1312,15 +1312,16 @@ document.getElementById('previewLabelPrintBtn')?.addEventListener('click', funct
     }
   });
 
-  // 從雲端讀取菜單（主機與從機都可用）
+    // 從雲端讀取菜單（即時接單專用：固定讀總部範本 menu/store001，上下架保留本機）
   document.getElementById('fetchMenuBtn')?.addEventListener('click', async function() {
-    if (typeof window.fetchMenuFromCloud === 'function') {
-      await window.fetchMenuFromCloud(this);
+    if (typeof window.fetchTemplateMenuFromCloud === 'function') {
+      await window.fetchTemplateMenuFromCloud(this);
       if (typeof window.refreshAllViews === 'function') window.refreshAllViews();
     } else {
       alert('讀取模組未載入');
     }
   });
+
 
   // deviceRole 變動時即時鎖定按鈕
   document.getElementById('deviceRole')?.addEventListener('change', function(){
