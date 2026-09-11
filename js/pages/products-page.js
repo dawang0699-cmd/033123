@@ -141,9 +141,10 @@ function normalizeImportedRow(row){
     : [];
   const moduleNamesText = String(row['加購模組'] ?? row['modules'] ?? '').trim();
   const moduleNames = moduleNamesText ? moduleNamesText.split('|').map(s => s.trim()).filter(Boolean) : [];
-  return { sku, name, price, category, enabled, sizes, moduleNames };
+  const sortRaw = String(row['排序'] ?? row['順序'] ?? row['sortOrder'] ?? '').trim();
+  const sortOrder = sortRaw === '' ? null : (Number.isNaN(Number(sortRaw)) ? null : Number(sortRaw));
+  return { sku, name, price, category, enabled, sizes, moduleNames, sortOrder };
 }
-
 
 function importExcelRowsToPending(rows){
   const imported = [];
@@ -207,17 +208,18 @@ function importExcelRowsToPending(rows){
         return mod ? { moduleId: mod.id } : null;
       })
       .filter(Boolean);
-    imported.push({
-      id: id(), sku: item.sku, name: item.name, price: item.price,
-      category: item.category || '未分類', enabled: item.enabled,
-      sizes: item.sizes || [],
-      modules: importedModules, image,
-      sortOrder: state.products.length + imported.length, status: 'pending'
-    });
-
+      imported.push({
+        id: id(), sku: item.sku, name: item.name, price: item.price,
+        category: item.category || '未分類', enabled: item.enabled,
+        sizes: item.sizes || [],
+        modules: importedModules, image,
+        sortOrder: (item.sortOrder != null) ? item.sortOrder : (state.products.length + imported.length),
+        status: 'pending'
+      });
   });
 
   // 結果回報
+
   const msgs = [];
   if(updatedSkus.length) msgs.push('✓ 已補 SKU：' + updatedSkus.length + ' 筆');
   if(updatedImages.length) msgs.push('✓ 已套用圖片：' + updatedImages.length + ' 筆');
@@ -250,7 +252,8 @@ async function importExcelFile(file){
 
 function exportProductsToExcel(){
   if(!window.XLSX){ alert('Excel 套件尚未載入，請重新整理'); return; }
-    const rows = (state.products || []).map(p => ({
+  const rows = (state.products || []).slice().sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0)).map((p, i) => ({
+    排序: Number(p.sortOrder ?? i),
     SKU: p.sku || '',
     商品名稱: p.name || '',
     價格: Number(p.price || 0),
