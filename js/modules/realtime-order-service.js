@@ -688,6 +688,7 @@ export function buildRealtimeOrderForPOS(remote){
     prepTimeMinutes: Number(remote.prepTimeMinutes || 0),
     estimatedReadyAt: remote.estimatedReadyAt || '',
     reservationAt: remote.reservationAt || '',
+    reservationReminded: remote.reservationReminded === true,
     merchantReplyMessage: remote.replyMessage || '',
     // 折扣欄位：用顧客端套用的優惠碼結果，而不是寫死 0
     discountType: 'amount',
