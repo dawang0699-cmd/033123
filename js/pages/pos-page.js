@@ -525,8 +525,16 @@ if(order){
           var _change = Math.max(0, _recv - _cashDue);
           alert('結帳完成\n實收 $' + _recv + '　找零 $' + _change);
         } else {
-          alert('結帳完成');
+                    alert('結帳完成');
         }
+
+        // v20260616: 結帳建新單後，重置訂單類型/桌號/預約時段，避免帶到下一單
+        var _otReset = document.getElementById('orderType');
+        if(_otReset) _otReset.value = '內用';
+        var _tableReset = document.getElementById('tableNo');
+        if(_tableReset) _tableReset.value = '';
+        var _slotReset = document.getElementById('posReservationSlot');
+        if(_slotReset){ _slotReset.value = ''; _slotReset.style.display = 'none'; }
 }
 
 
