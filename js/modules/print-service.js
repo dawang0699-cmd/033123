@@ -624,7 +624,8 @@ function buildBridgePayload(order, mode){
     // 訂單資訊
     orderNumber: fields.orderNo  ? String(order.orderNo || order.id || '') : '',
     dateTime:    fields.dateTime ? fmtDate(order.createdAt) : '',
-    orderType:   fields.orderType? (((order.orderType || '') + (order.tableNo ? ' / ' + order.tableNo : '')).trim()+ (getReservationText(order) ? '　取餐:' + getReservationText(order) : '')): (getReservationText(order) ? '取餐:' + getReservationText(order) : ''),
+    orderType:   fields.orderType? (((order.orderType || '') + (order.tableNo ? ' / ' + order.tableNo : '')).trim()+ (getReservationText(order) ? '\n取餐:' + getReservationText(order) : '')): (getReservationText(order) ? '取餐:' + getReservationText(order) : ''),
+
 
 
     // 付款方式（僅顧客單）
