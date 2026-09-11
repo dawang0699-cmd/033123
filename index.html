@@ -994,7 +994,7 @@
   .cash-quick:active{ background:#bfdbfe; }
 </style>
 <!-- ===== 通用數字輸入 Modal（折扣等用，自製鍵盤）v20260620 ===== -->
-<div id="numPadModal" class="modal hidden">
+<div id="numPadModal" class="modal hidden" style="z-index:10000">
   <div class="modal-backdrop" id="numPadBackdrop"></div>
   <div class="modal-dialog" style="max-width:360px;width:92%">
     <div class="row between wrap">
@@ -1363,11 +1363,14 @@
       <div id="overlayItems" style="flex:1 1 auto; min-height:0; overflow:auto; margin-bottom:16px; font-size:14px; color:#334155; display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:6px 16px; align-content:start;"></div>
 
 
-      <!-- 備餐時間：固定 -->
+       <!-- 備餐時間：固定（v20260620 改用自製數字鍵盤，不叫系統鍵盤） -->
       <div style="margin-bottom:12px; flex:0 0 auto;">
         <label style="font-size:14px; font-weight:600; color:#334155;">備餐時間（分鐘）</label>
-        <input type="number" id="overlayPrepTime" value="20" style="width:100%; padding:10px; margin-top:4px; border:1px solid #cbd5e1; border-radius:8px; font-size:16px; box-sizing:border-box;" />
+        <input type="text" id="overlayPrepTime" value="20" readonly inputmode="none"
+          onclick="window.openNumPad && window.openNumPad({title:'備餐時間（分鐘）',hint:'請輸入分鐘數',onConfirm:function(v){var el=document.getElementById('overlayPrepTime');el.value=Math.max(0,Math.floor(Number(v)||0));}})"
+          style="width:100%; padding:10px; margin-top:4px; border:1px solid #cbd5e1; border-radius:8px; font-size:16px; box-sizing:border-box; cursor:pointer; background:#fff;" />
       </div>
+
 
       <!-- 回覆顧客訊息：固定 -->
       <div style="margin-bottom:16px; flex:0 0 auto;">
