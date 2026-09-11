@@ -482,8 +482,7 @@ export async function deductPointsOnConfirm(order){
     const use = Math.min(want, bal);           // 以真實餘額為上限，杜絕超折
     if(use <= 0){ order.pointsUsed = 0; return 0; }
     const r = await _writePointsTxn(phone, -use, 'use', order.orderNo || order.id);
-    if(r.ok){ order.pointsUsed = use; return use; }
-    order.pointsUsed = 0;
+    if(r.ok){ order.pointsUsed = use; order.pointsBalanceAfter = r.balanceAfter; return use; }    order.pointsUsed = 0;
     return 0;
   }catch(err){
     console.warn('deductPointsOnConfirm failed:', err && err.message);
