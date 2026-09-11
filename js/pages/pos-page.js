@@ -441,7 +441,15 @@ export function renderCart(){
   const badge = document.getElementById('cartBadge');
   if(badge) badge.textContent = state.cart.reduce((s,x)=> s + x.qty, 0);
 }
-
+function resetOrderTypeFields(){
+    // v20260616: 結帳後重置訂單類型/桌號/預約時段，回到乾淨新單狀態
+    var _otReset = document.getElementById('orderType');
+    if(_otReset) _otReset.value = '內用';
+    var _tableReset = document.getElementById('tableNo');
+    if(_tableReset) _tableReset.value = '';
+    var _slotReset = document.getElementById('posReservationSlot');
+    if(_slotReset){ _slotReset.value = ''; _slotReset.style.display = 'none'; }
+}
 function finalizeOrder(paymentMethod){
     var mode = document.getElementById('paymentTargetMode').value || 'new';
     var targetOrderId = document.getElementById('paymentTargetOrderId').value || '';
@@ -477,7 +485,7 @@ if(order){
     }
 
 }
-      if(paymentMethod === '待付款'){
+           if(paymentMethod === '待付款'){
         showToast('已加入待付款', 500);
       } else if(paymentMethod === '現金' && _cashReceived !== ''){
         var _recv = Number(_cashReceived) || 0;
@@ -486,7 +494,9 @@ if(order){
       } else {
         alert('已完成收款');
       }
+      resetOrderTypeFields();
       return;
+
 
     }
 
@@ -528,13 +538,7 @@ if(order){
                     alert('結帳完成');
         }
 
-        // v20260616: 結帳建新單後，重置訂單類型/桌號/預約時段，避免帶到下一單
-        var _otReset = document.getElementById('orderType');
-        if(_otReset) _otReset.value = '內用';
-        var _tableReset = document.getElementById('tableNo');
-        if(_tableReset) _tableReset.value = '';
-        var _slotReset = document.getElementById('posReservationSlot');
-        if(_slotReset){ _slotReset.value = ''; _slotReset.style.display = 'none'; }
+      resetOrderTypeFields();
 }
 
 
