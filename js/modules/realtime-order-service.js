@@ -254,11 +254,14 @@ function showOnlineOrderOverlay(orderId){
 
         if(!isReservation){
           try{
+          // 預約單自動接單時不印（要等 30 分鐘前提醒才印），一般單才印
+          if(!posOrder.reservationAt){
             const { printKitchenCopies } = await import('./print-service.js');
             const cfg2 = ensureRealtimeConfig();
             // 線上訂單=待付款：接單時只印廚房單（顧客單於之後 POS 結帳時才印）
             if(cfg2.autoPrintKitchenOnConfirm) printKitchenCopies(posOrder);
-          }catch(pe){ console.error('自動列印失敗：', pe); }
+          }
+        }catch(pe){ console.error('自動接單列印失敗：', pe); } 
         }
       }
       if(typeof window.refreshAllViews === 'function') window.refreshAllViews();
@@ -684,6 +687,7 @@ export function buildRealtimeOrderForPOS(remote){
     storeCode: remote.storeCode || '',
     prepTimeMinutes: Number(remote.prepTimeMinutes || 0),
     estimatedReadyAt: remote.estimatedReadyAt || '',
+    reservationAt: remote.reservationAt || '',
     merchantReplyMessage: remote.replyMessage || '',
     // 折扣欄位：用顧客端套用的優惠碼結果，而不是寫死 0
     discountType: 'amount',
