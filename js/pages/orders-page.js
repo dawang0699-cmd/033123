@@ -301,6 +301,12 @@ function renderOrdersSection(wrap, orders, mode){
         <span style="color:#047857">🎁 優惠折扣${o.couponCode ? '（' + escapeHtml(o.couponCode) + '）' : ''}${o.couponMessage ? ' <span class="muted">' + escapeHtml(o.couponMessage) + '</span>' : ''}</span>
         <strong style="color:#16a34a">-${money(Number(o.discountAmount||0))}</strong>
       </div>` : ''}
+            ${Number(o.pointsUsed||0) > 0 ? `
+      <div class="row between" style="margin-top:6px;padding:6px 10px;background:#fef9c3;border:1px dashed #eab308;border-radius:6px;font-size:13px">
+        <span style="color:#a16207">⭐ 點數折抵（使用 ${money(Number(o.pointsUsed||0))} 點${o.pointsBalanceAfter!=null ? '，折抵後剩餘 '+money(Number(o.pointsBalanceAfter))+' 點' : ''}）</span>
+        <strong style="color:#ca8a04">-${money(Number(o.pointsUsed||0))}</strong>
+      </div>` : ''}
+
       <div class="stack small" style="margin-top:12px">
 
         ${o.items.map(i=>{
