@@ -216,8 +216,7 @@ function showOnlineOrderOverlay(orderId){
   }
 
     const prepEl = document.getElementById('overlayPrepTime');
-  prepEl.value = isReservation ? 30 : 20;
-  document.getElementById('overlayMessage').value = '';
+prepEl.textContent = isReservation ? 30 : 20; prepEl.setAttribute('data-value', isReservation ? 30 : 20);  document.getElementById('overlayMessage').value = '';
 
   // v20260912：準備時間改用自製數字鍵盤，不叫系統鍵盤
   prepEl.setAttribute('readonly', 'readonly');
@@ -232,8 +231,7 @@ function showOnlineOrderOverlay(orderId){
         hint: '請輸入分鐘數',
         onConfirm: (val)=>{
           const m = Math.max(0, Math.floor(Number(val) || 0));
-          prepEl.value = m;
-        }
+prepEl.textContent = m; prepEl.setAttribute('data-value', m);        }
       });
     });
   }
@@ -245,8 +243,7 @@ function showOnlineOrderOverlay(orderId){
   acceptBtn.disabled = false;
   acceptBtn.textContent = isReservation ? '✓ 確認預約' : '確認接單';
   acceptBtn.onclick = async ()=>{
-    const prepTime = parseInt(document.getElementById('overlayPrepTime').value) || 20;
-    const defaultMsg = isReservation
+    const prepTime = parseInt(document.getElementById('overlayPrepTime').getAttribute('data-value')) || 20;    const defaultMsg = isReservation
       ? `已收到您的預約（${reservationText}），將於時段前備餐`
       : `預計 ${prepTime} 分鐘後可取餐`;
     const msg = document.getElementById('overlayMessage').value || defaultMsg;
