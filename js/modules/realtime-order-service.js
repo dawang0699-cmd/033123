@@ -215,8 +215,29 @@ function showOnlineOrderOverlay(orderId){
     itemsEl.innerHTML = '';
   }
 
-  document.getElementById('overlayPrepTime').value = isReservation ? 30 : 20;
+    const prepEl = document.getElementById('overlayPrepTime');
+  prepEl.value = isReservation ? 30 : 20;
   document.getElementById('overlayMessage').value = '';
+
+  // v20260912：準備時間改用自製數字鍵盤，不叫系統鍵盤
+  prepEl.setAttribute('readonly', 'readonly');
+  prepEl.setAttribute('inputmode', 'none');
+  prepEl.style.cursor = 'pointer';
+  if(prepEl.dataset.numpadBound !== '1'){
+    prepEl.dataset.numpadBound = '1';
+    prepEl.addEventListener('click', ()=>{
+      if(typeof window.openNumPad !== 'function') return;
+      window.openNumPad({
+        title: '準備時間（分鐘）',
+        hint: '請輸入分鐘數',
+        onConfirm: (val)=>{
+          const m = Math.max(0, Math.floor(Number(val) || 0));
+          prepEl.value = m;
+        }
+      });
+    });
+  }
+
 
   overlay.style.display = 'flex';
 
