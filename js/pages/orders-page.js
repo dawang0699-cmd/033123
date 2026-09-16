@@ -187,12 +187,18 @@ function voidOrder(orderId){
     const staffId = currentSession ? currentSession.staffId : '';
 
     // 記錄原始狀態，方便日後追溯
-    o.statusBeforeVoid = o.status || '';
-    o.status = 'void';
-    o.voidedAt = new Date().toISOString();
-    o.voidedReason = reason;
-    o.voidedBy = staffId;
-    o.updatedAt = new Date().toISOString();
+       const nowIso = new Date().toISOString();
+    state.orders.forEach(x=>{
+      if(x.orderNo === o.orderNo && x.status !== 'void' && x.status !== 'completed'){
+        x.statusBeforeVoid = x.status || '';
+        x.status = 'void';
+        x.voidedAt = nowIso;
+        x.voidedReason = reason;
+        x.voidedBy = staffId;
+        x.updatedAt = nowIso;
+      }
+    });
+
 
     if(o.statusBeforeVoid === 'pending' && Number(o.pointsUsed||0) > 0){
       try{
