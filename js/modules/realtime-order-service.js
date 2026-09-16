@@ -261,7 +261,8 @@ prepEl.textContent = m; prepEl.setAttribute('data-value', m);        }
           if(used > 0) posOrder.total = Math.max(0, Number(posOrder.subtotal || 0) - used);
         } catch (e) { console.warn('接單預扣點數失敗：', e); }
         if(!Array.isArray(state.orders)) state.orders = [];
-        state.orders.unshift(posOrder);
+        if(!state.orders.some(x => x.id === posOrder.id)){state.orders.unshift(posOrder);}
+
         persistAll();
 
         try {
@@ -354,7 +355,8 @@ function startAlarm(orderId){
           if(used > 0) posOrder.total = Math.max(0, Number(posOrder.subtotal || 0) - used);
         } catch (e) { console.warn('接單預扣點數失敗：', e); }
         if(!Array.isArray(state.orders)) state.orders = [];
-        state.orders.unshift(posOrder);
+        if(!state.orders.some(x => x.id === posOrder.id)){state.orders.unshift(posOrder);}
+
         persistAll();
 
         try {
