@@ -7,7 +7,7 @@ import { getDiscountResult, getDiscountType, setDiscountType, handleDiscountInpu
 import { createOrUpdateOrder, markPendingOrderPaid } from '../modules/order-service.js';
 import { buildCartPreviewOrder, getPrintSettings, printOrderLabels, printOrderReceipt, printKitchenCopies, printNumberTicket, openCashDrawer, getReceiptHtml } from '../modules/print-service.js';
 import { hasOpenSession } from '../modules/report-session.js';
-import { getRealtimeAuthUser, signInPOSWithGoogle, waitForAuthReady } from '../modules/realtime-order-service.js';
+import { getRealtimeAuthUser, signInPOSWithGoogle, waitForAuthReady, _getRef, _dbApi } from '../modules/realtime-order-service.js';
 // v20260525 新增：客顯同步（購物車更新時推送）
 import { displayCart, displayIdle } from '../modules/customer-display-service.js';
 
@@ -450,6 +450,41 @@ function resetOrderTypeFields(){
     var _slotReset = document.getElementById('posReservationSlot');
     if(_slotReset){ _slotReset.value = ''; _slotReset.style.display = 'none'; }
 }
+// 線上單結帳／狀態回寫 Firebase：讓顧客端查詢顯示已完成、並讓本機清空後重建能排除已結帳單
+// storeCode 一律用當店設定；失敗只 warn，絕不擋結帳流程（遵守多店防混淆與 Firebase 容錯規範）
+async function syncOnlineOrderStatusToCloud(order, newStatus){
+  try{
+    if(!order) return;
+    // 只處理線上單：id 以 online_ 開頭，還原成 Firebase 原始 id
+    const oid = String(order.id || '');
+    if(oid.indexOf('online_') !== 0) return;
+    const remoteId = oid.slice('online_'.length);
+    if(!remoteId) return;
+
+    const cfg = (state.settings && state.settings.dashboard) || {};
+    const storeCode = cfg.storeId;
+    if(!storeCode) return;
+
+    const ref = await _getRef(`onlineOrders/${storeCode}/${remoteId}`);
+    const api = _dbApi();
+    if(!ref || !api) return;
+
+    const patch = { status: newStatus, updatedAt: new Date().toISOString() };
+    if(newStatus === 'completed') patch.settledAt = new Date().toISOString();
+    await api.update(ref, patch);
+
+    // 同步顧客查詢節點 customerOrderLookup（顧客端「我的訂單」讀這份）
+    const lookupKey = String(order.customerLookupKey || order.customerPhone || '').replace(/\D/g,'');
+    const orderNo = order.orderNo || '';
+    if(lookupKey && remoteId){
+      const lookupRef = await _getRef(`customerOrderLookup/${storeCode}/${lookupKey}/${remoteId}`);
+      if(lookupRef) await api.update(lookupRef, { status: newStatus, updatedAt: new Date().toISOString() });
+    }
+  }catch(e){
+    console.warn('[online-sync] 回寫線上單狀態失敗（不影響結帳）：', e && e.message);
+  }
+}
+
 function finalizeOrder(paymentMethod){
     var mode = document.getElementById('paymentTargetMode').value || 'new';
     var targetOrderId = document.getElementById('paymentTargetOrderId').value || '';
@@ -457,11 +492,17 @@ function finalizeOrder(paymentMethod){
 
     var order = null;
 
-    if(mode === 'pending'){
+        if(mode === 'pending'){
         order = markPendingOrderPaid(targetOrderId, paymentMethod);
         document.getElementById('paymentModal').classList.add('hidden');
         persistAll();
         window.refreshAllViews();
+
+// 線上單結帳（非待付款）→ 回寫 Firebase，讓顧客端顯示已完成、並標記已結帳
+          if(paymentMethod !== '待付款' && order){
+          syncOnlineOrderStatusToCloud(order, 'completed');
+        }
+
 
         // 開錢箱（依設定 openDrawer，且僅結帳時）
      if(order && paymentMethod === '現金'){
