@@ -591,7 +591,7 @@ export async function startPOSRealtimeListener(onRefresh){
     });
     // ===== 抓回結束 =====
 
-    let hasNewOrder = false;
+
 
     let hasNewOrder = false;
     incoming.forEach(order => {
