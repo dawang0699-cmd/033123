@@ -206,14 +206,37 @@ function voidOrder(orderId){
         await cust.refundPointsOnCancel(o);
       }catch(err){ console.warn('作廢退點失敗：', err); }
     }
+    // ===== 線上單作廢 → 回寫 Firebase，避免監聽器把它又抓回待付款區 =====
+    try{
+      const rt = await import('../modules/realtime-order-service.js');
+      const dbApi = rt._dbApi();
+      const storeCode = rt.getStoreCode();
+      const voidedOnline = state.orders.filter(x =>
+        x.status === 'void' &&
+        x.voidedAt === nowIso &&
+        typeof x.id === 'string' &&
+        x.id.startsWith('online_')
+      );
+      for(const vo of voidedOnline){
+        const remoteId = vo.id.slice('online_'.length);
+        const ref = await rt._getRef(`onlineOrders/${storeCode}/${remoteId}`);
+        await dbApi.update(ref, {
+          posVoided: true,
+          status: 'void',
+          voidedReason: vo.voidedReason || '',
+          updatedAt: nowIso
+        });
+      }
+    }catch(e){
+      console.warn('線上單作廢回寫 Firebase 失敗（不影響本機作廢）：', e && e.message);
+    }
+    // ===== 作廢回寫結束 =====
 
     persistAll();
-    window.refreshAllViews();
+ window.refreshAllViews();
     alert(`已作廢訂單「${o.orderNo}」\n原因：${reason}`);
   });
-
 }
-
 // 作廢原因選單 modal（動態建立，不需改 index.html，全程不打字）
 function openVoidReasonModal(order, onPick){
   // 移除舊的（避免重複）
