@@ -279,7 +279,8 @@ function renderOrdersSection(wrap, orders, mode){
       row.style.cssText = 'opacity:0.7;background:#fef2f2;border-left:4px solid #ef4444;';
     }
     const prepMeta = o.prepTimeMinutes ? ` ・ 備餐 ${escapeHtml(String(o.prepTimeMinutes))} 分鐘` : '';
-    const readyMeta = o.estimatedReadyAt ? ` ・ 預計完成 ${escapeHtml(fmtLocalDateTime(o.estimatedReadyAt))}` : '';
+    const readyMeta = (!o.reservationAt && o.estimatedReadyAt) ? ` ・ 預計完成 ${escapeHtml(fmtLocalDateTime(o.estimatedReadyAt))}` : '';
+    const reservationMeta = o.reservationAt ? `<div style="color:#b45309;font-weight:600;margin-top:4px">📅 預約取餐：${escapeHtml(fmtLocalDateTime(o.reservationAt))}</div>` : '';
     const replyMeta = o.merchantReplyMessage ? `<div class="muted">店家回覆：${escapeHtml(o.merchantReplyMessage)}</div>` : '';
     const voidMeta = isVoid
       ? `<div style="color:#dc2626;font-weight:600;margin-top:6px;font-size:13px">⚠️ 已作廢：${escapeHtml(o.voidedReason || '無原因')}<br><span class="muted" style="font-weight:normal">作廢時間：${escapeHtml(fmtLocalDateTime(o.voidedAt))}${o.voidedBy ? ' ・ 作廢人：' + escapeHtml(o.voidedBy) : ''}</span></div>`
@@ -294,6 +295,7 @@ function renderOrdersSection(wrap, orders, mode){
           <div class="muted">${escapeHtml(fmtLocalDateTime(o.createdAt))} ・ ${escapeHtml(o.orderType)} ${o.tableNo ? '・' + escapeHtml(o.tableNo) : ''}${!isPending && !isVoid && o.paymentMethod ? ' ・ 付款：' + escapeHtml(o.paymentMethod) : ''}${prepMeta}${readyMeta}</div>
           ${o.payMethod === '現金' || o.payMethod === '電子支付' ? `<div style="margin-top:4px"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;${o.payMethod === '現金' ? 'background:#dcfce7;color:#15803d' : 'background:#dbeafe;color:#1d4ed8'}">顧客選擇：${escapeHtml(o.payMethod)}</span></div>` : ''}
           ${replyMeta}
+          ${reservationMeta}
           ${voidMeta}
         </div>
 
