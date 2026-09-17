@@ -577,19 +577,24 @@ export async function startPOSRealtimeListener(onRefresh){
 
     state.onlineIncomingOrders = incoming;
 
-    // ===== 本機清空後：自動抓回「已接單、未結帳」的線上單 =====
-    // confirmed = 已接單未結帳；completed/rejected 會被排除；
-    // posVoided 為之後補的作廢回寫標記，先預留防線。
+        // ===== 本機清空後：自動抓回「本班、已接單、未結帳」的線上單 =====
     if(!Array.isArray(state.orders)) state.orders = [];
+    const _sess = getCurrentSession();
+    const _sessStart = _sess ? new Date(_sess.startedAt || 0).getTime() : 0;
     incoming.forEach(row => {
+      if(!_sess) return;                              // 沒開班就不抓
       if(row.status !== 'confirmed') return;          // 只抓已接單未結帳
       if(row.posVoided === true) return;              // 已作廢的不抓回
+      const acceptedAt = new Date(row.updatedAt || row.createdAt || 0).getTime();
+      if(acceptedAt < _sessStart) return;             // 開班之前接的舊單不抓
       const localId = 'online_' + row.id;
-      if(state.orders.some(o => o && o.id === localId)) return; // 已在本機就跳過
+      if(state.orders.some(o => o && o.id === localId)) return;
       const rebuilt = buildRealtimeOrderForPOS(row);
+      rebuilt.sessionId = _sess.id;                   // 明確歸到本班
       state.orders.unshift(rebuilt);
     });
     // ===== 抓回結束 =====
+
 
 
 
