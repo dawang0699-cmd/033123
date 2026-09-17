@@ -237,6 +237,75 @@ function voidOrder(orderId){
     alert(`已作廢訂單「${o.orderNo}」\n原因：${reason}`);
   });
 }
+// ── 批量作廢：一次作廢多張勾選的待付款單 ──
+async function batchVoidOrders(orderIds){
+  if(!hasOpenSession()) return alert('🔒 尚未開始值班，請先到報表頁開班');
+  if(!orderIds || !orderIds.length) return alert('請先勾選要作廢的訂單');
+
+  openVoidReasonModal({ orderNo: `共 ${orderIds.length} 筆`, total: 0 }, async (reason)=>{
+    const currentSession = getCurrentSession();
+    const staffId = currentSession ? currentSession.staffId : '';
+    const nowIso = new Date().toISOString();
+
+    // 逐筆標記作廢（沿用單筆規則：同 orderNo、非 void/completed 才改）
+    const targetNos = new Set();
+    orderIds.forEach(id=>{
+      const o = state.orders.find(x=>x.id===id);
+      if(o) targetNos.add(o.orderNo);
+    });
+    state.orders.forEach(x=>{
+      if(targetNos.has(x.orderNo) && x.status !== 'void' && x.status !== 'completed'){
+        x.statusBeforeVoid = x.status || '';
+        x.status = 'void';
+        x.voidedAt = nowIso;
+        x.voidedReason = reason;
+        x.voidedBy = staffId;
+        x.updatedAt = nowIso;
+      }
+    });
+
+    // 退點（本班待付款且有折抵點數的）
+    for(const id of orderIds){
+      const o = state.orders.find(x=>x.id===id);
+      if(o && o.statusBeforeVoid === 'pending' && Number(o.pointsUsed||0) > 0){
+        try{
+          const cust = await import('../modules/customer-service.js');
+          await cust.refundPointsOnCancel(o);
+        }catch(err){ console.warn('批量作廢退點失敗：', err); }
+      }
+    }
+
+    // 線上單回寫 Firebase posVoided:true（沿用單筆邏輯）
+    try{
+      const rt = await import('../modules/realtime-order-service.js');
+      const dbApi = rt._dbApi();
+      const storeCode = rt.getStoreCode();
+      const voidedOnline = state.orders.filter(x =>
+        x.status === 'void' &&
+        x.voidedAt === nowIso &&
+        typeof x.id === 'string' &&
+        x.id.startsWith('online_')
+      );
+      for(const vo of voidedOnline){
+        const remoteId = vo.id.slice('online_'.length);
+        const ref = await rt._getRef(`onlineOrders/${storeCode}/${remoteId}`);
+        await dbApi.update(ref, {
+          posVoided: true,
+          status: 'void',
+          voidedReason: vo.voidedReason || '',
+          updatedAt: nowIso
+        });
+      }
+    }catch(e){
+      console.warn('批量作廢回寫 Firebase 失敗（不影響本機作廢）：', e && e.message);
+    }
+
+    persistAll();
+    window.refreshAllViews();
+    alert(`已批量作廢 ${orderIds.length} 筆訂單\n原因：${reason}`);
+  });
+}
+
 // 作廢原因選單 modal（動態建立，不需改 index.html，全程不打字）
 function openVoidReasonModal(order, onPick){
   // 移除舊的（避免重複）
@@ -310,8 +379,10 @@ function renderOrdersSection(wrap, orders, mode){
       : '';
     const badgeText = isVoid ? '已作廢' : (isPending ? '待付款' : '已完成');
     const badgeClass = isVoid ? 'voided' : (isPending ? 'pending' : 'done');
-    row.innerHTML = `
+        row.innerHTML = `
+      ${isPending ? `<label style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:14px;color:#475569"><input type="checkbox" class="batch-void-check" data-id="${escapeHtml(o.id)}" style="width:18px;height:18px">勾選以批量作廢</label>` : ''}
       <div class="row between wrap">
+
         <div>
           <strong style="${isVoid ? 'text-decoration:line-through;color:#94a3b8' : ''}">${escapeHtml(o.orderNo)}</strong>
           <span class="badge ${badgeClass}" style="${isVoid ? 'background:#fecaca;color:#991b1b' : ''}">${badgeText}</span>
@@ -390,10 +461,54 @@ export function renderOrders(){
   const voided = filtered.filter(o => o.status === 'void');
 
   renderOrdersSection(document.getElementById('pendingOrdersList'), pending, 'pending');
+  renderBatchVoidBar(pending);
   renderOrdersSection(document.getElementById('completedOrdersList'), completed, 'completed');
 
   // 已作廢區塊（動態插入到 completedOrdersList 後面）
   renderVoidedSection(voided);
+}
+function renderBatchVoidBar(pendingOrders){
+  const listEl = document.getElementById('pendingOrdersList');
+  if(!listEl || !listEl.parentNode) return;
+
+  let bar = document.getElementById('batchVoidBar');
+  if(!pendingOrders.length){
+    if(bar) bar.remove();
+    return;
+  }
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'batchVoidBar';
+    bar.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0;padding:8px 12px;background:#fff7ed;border:1px solid #fdba74;border-radius:8px';
+    listEl.parentNode.insertBefore(bar, listEl);
+  }
+  bar.innerHTML = `
+    <label style="display:flex;align-items:center;gap:6px;font-size:14px;color:#9a3412;font-weight:600">
+      <input type="checkbox" id="batchVoidSelectAll" style="width:18px;height:18px">全選待付款
+    </label>
+    <button class="danger-btn small-btn" id="batchVoidRunBtn">批量作廢勾選項（<span id="batchVoidCount">0</span>）</button>
+  `;
+
+  const updateCount = ()=>{
+    const n = document.querySelectorAll('.batch-void-check:checked').length;
+    const c = document.getElementById('batchVoidCount');
+    if(c) c.textContent = n;
+  };
+  document.querySelectorAll('.batch-void-check').forEach(chk=>{
+    chk.onchange = updateCount;
+  });
+  const selectAll = bar.querySelector('#batchVoidSelectAll');
+  selectAll.onchange = ()=>{
+    document.querySelectorAll('.batch-void-check').forEach(chk=>{ chk.checked = selectAll.checked; });
+    updateCount();
+  };
+  bar.querySelector('#batchVoidRunBtn').onclick = ()=>{
+    const ids = Array.from(document.querySelectorAll('.batch-void-check:checked')).map(c=>c.dataset.id);
+    if(!ids.length) return alert('請先勾選要作廢的訂單');
+    if(!confirm(`確定要作廢勾選的 ${ids.length} 筆訂單？`)) return;
+    batchVoidOrders(ids);
+  };
+  updateCount();
 }
 
 function renderVoidedSection(voidedOrders){
