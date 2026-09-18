@@ -7,7 +7,6 @@
  *  - 作廢單不可再修改，但可重新列印（追溯用）
  */
 import { state, persistAll } from '../core/store.js';
-import { escapeHtml, deepCopy, money, fmtLocalDateTime } from '../core/utils.js';
 import { buildRealtimeOrderForPOS, confirmOnlineOrder, getRealtimeConfig, rejectOnlineOrder } from '../modules/realtime-order-service.js';
 import { printKitchenCopies, printOrderLabels, printOrderReceipt, getReceiptHtml, getLabelHtml, previewInModal } from '../modules/print-service.js';
 import { hasOpenSession, getCurrentSession } from '../modules/report-session.js';
