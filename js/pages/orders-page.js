@@ -11,7 +11,7 @@ import { escapeHtml, deepCopy, money, fmtLocalDateTime } from '../core/utils.js'
 import { buildRealtimeOrderForPOS, confirmOnlineOrder, getRealtimeConfig, rejectOnlineOrder } from '../modules/realtime-order-service.js';
 import { printKitchenCopies, printOrderLabels, printOrderReceipt, getReceiptHtml, getLabelHtml, previewInModal } from '../modules/print-service.js';
 import { hasOpenSession, getCurrentSession } from '../modules/report-session.js';
-
+import { escapeHtml, deepCopy, money, fmtLocalDateTime, id } from '../core/utils.js';
 
 function renderIncomingOnlineOrders(){
   const wrap = document.getElementById('incomingOnlineOrdersList');
@@ -305,6 +305,97 @@ async function batchVoidOrders(orderIds){
     alert(`已批量作廢 ${orderIds.length} 筆訂單\n原因：${reason}`);
   });
 }
+// ── 批量／合併結帳：勾選多張待付款單，併成一張暫時單，走原本結帳流程（可算找零）──
+function batchCheckoutOrders(orderIds){
+  if(!hasOpenSession()) return alert('🔒 尚未開始值班，請先到報表頁開班');
+
+  const targets = orderIds
+    .map(x => state.orders.find(o => o.id === x))
+    .filter(o => o && o.status === 'pending');
+  if(!targets.length) return alert('勾選項目中沒有可結帳的待付款單');
+
+  // 只勾一張 → 直接走原本單筆流程
+  if(targets.length === 1){
+    document.getElementById('paymentTargetMode').value = 'pending';
+    document.getElementById('paymentTargetOrderId').value = targets[0].id;
+    document.getElementById('paymentModal').classList.remove('hidden');
+    return;
+  }
+
+  // 多張 → 併成一張暫時單
+  const mergedItems = [];
+  targets.forEach(o => (o.items || []).forEach(it => mergedItems.push(deepCopy(it))));
+  const subtotal = targets.reduce((s,o)=> s + Number(o.subtotal || o.total || 0), 0);
+  const total    = targets.reduce((s,o)=> s + Number(o.total || 0), 0);
+  const nowIso   = new Date().toISOString();
+  const mergeId  = 'merge_' + id();
+
+  state.orders.unshift({
+    id: mergeId,
+    orderNo: 'MG' + Date.now(),
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    status: 'pending',
+    paymentMethod: '待付款',
+    orderType: targets[0].orderType || '內用',
+    tableNo: targets[0].tableNo || '',
+    sessionId: (getCurrentSession() && getCurrentSession().id) || null,
+    customerName: targets[0].customerName || '',
+    customerPhone: targets[0].customerPhone || '',
+    customerLookupKey: targets[0].customerLookupKey || '',
+    subtotal,
+    total,
+    discountAmount: 0,
+    items: mergedItems,
+    isMerged: true,
+    mergedFrom: targets.map(o => o.id)
+  });
+  persistAll();
+
+  document.getElementById('paymentTargetMode').value = 'pending';
+  document.getElementById('paymentTargetOrderId').value = mergeId;
+  document.getElementById('paymentModal').classList.remove('hidden');
+}
+
+// ── 收尾：把已結帳完成的合併單，其子單標 merged（不計營業額）+ 線上子單回寫 Firebase ──
+// 由 renderOrders() 開頭呼叫，每次訂單頁重繪自動檢查
+async function settleMergedOrders(){
+  const done = (state.orders || []).filter(o =>
+    o && o.isMerged && o.status === 'completed' && !o.mergedSettled && Array.isArray(o.mergedFrom));
+  if(!done.length) return;
+
+  for(const mo of done){
+    const nowIso = new Date().toISOString();
+    for(const childId of mo.mergedFrom){
+      const child = state.orders.find(o => o.id === childId);
+      if(!child || child.status === 'void') continue;
+      child.status = 'merged';          // calcTodayStats 只算 completed/pending → merged 自動不計入
+      child.paymentMethod = mo.paymentMethod;
+      child.mergedInto = mo.id;
+      child.updatedAt = nowIso;
+
+      if(typeof child.id === 'string' && child.id.startsWith('online_')){
+        try{
+          const rt = await import('../modules/realtime-order-service.js');
+          const dbApi = rt._dbApi();
+          const storeCode = rt.getStoreCode();
+          const remoteId = child.id.slice('online_'.length);
+          if(dbApi && storeCode && remoteId){
+            const ref = await rt._getRef(`onlineOrders/${storeCode}/${remoteId}`);
+            await dbApi.update(ref, { status:'completed', settledAt:nowIso, updatedAt:nowIso });
+            const lookupKey = String(child.customerLookupKey || child.customerPhone || '').replace(/\D/g,'');
+            if(lookupKey){
+              const lookupRef = await rt._getRef(`customerOrderLookup/${storeCode}/${lookupKey}/${remoteId}`);
+              if(lookupRef) await dbApi.update(lookupRef, { status:'completed', updatedAt:nowIso });
+            }
+          }
+        }catch(e){ console.warn('合併子單回寫 Firebase 失敗（不影響本機）：', e && e.message); }
+      }
+    }
+    mo.mergedSettled = true;
+  }
+  persistAll();
+}
 
 // 作廢原因選單 modal（動態建立，不需改 index.html，全程不打字）
 function openVoidReasonModal(order, onPick){
@@ -451,6 +542,7 @@ function renderOrdersSection(wrap, orders, mode){
 }
 
 export function renderOrders(){
+  settleMergedOrders();
   renderSessionBanner();
   renderIncomingOnlineOrders();
   const filtered = getFilteredOrders();
@@ -482,18 +574,23 @@ function renderBatchVoidBar(pendingOrders){
     bar.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0;padding:8px 12px;background:#fff7ed;border:1px solid #fdba74;border-radius:8px';
     listEl.parentNode.insertBefore(bar, listEl);
   }
-  bar.innerHTML = `
+    bar.innerHTML = `
     <label style="display:flex;align-items:center;gap:6px;font-size:14px;color:#9a3412;font-weight:600">
       <input type="checkbox" id="batchVoidSelectAll" style="width:18px;height:18px">全選待付款
     </label>
+    <button class="primary-btn small-btn" id="batchCheckoutBtn">批量結帳（<span id="batchCheckoutCount">0</span>）</button>
     <button class="danger-btn small-btn" id="batchVoidRunBtn">批量作廢勾選項（<span id="batchVoidCount">0</span>）</button>
   `;
 
-  const updateCount = ()=>{
+
+    const updateCount = ()=>{
     const n = document.querySelectorAll('.batch-void-check:checked').length;
-    const c = document.getElementById('batchVoidCount');
-    if(c) c.textContent = n;
+    const c1 = document.getElementById('batchVoidCount');
+    const c2 = document.getElementById('batchCheckoutCount');
+    if(c1) c1.textContent = n;
+    if(c2) c2.textContent = n;
   };
+
   document.querySelectorAll('.batch-void-check').forEach(chk=>{
     chk.onchange = updateCount;
   });
@@ -502,14 +599,23 @@ function renderBatchVoidBar(pendingOrders){
     document.querySelectorAll('.batch-void-check').forEach(chk=>{ chk.checked = selectAll.checked; });
     updateCount();
   };
-  bar.querySelector('#batchVoidRunBtn').onclick = ()=>{
+    bar.querySelector('#batchVoidRunBtn').onclick = ()=>{
     const ids = Array.from(document.querySelectorAll('.batch-void-check:checked')).map(c=>c.dataset.id);
     if(!ids.length) return alert('請先勾選要作廢的訂單');
     if(!confirm(`確定要作廢勾選的 ${ids.length} 筆訂單？`)) return;
     batchVoidOrders(ids);
   };
+
+  const coBtn = bar.querySelector('#batchCheckoutBtn');
+  if(coBtn) coBtn.onclick = ()=>{
+    const ids = Array.from(document.querySelectorAll('.batch-void-check:checked')).map(c=>c.dataset.id);
+    if(!ids.length) return alert('請先勾選要結帳的訂單');
+    batchCheckoutOrders(ids);
+  };
+
   updateCount();
 }
+
 
 function renderVoidedSection(voidedOrders){
   let wrap = document.getElementById('voidedOrdersWrap');
