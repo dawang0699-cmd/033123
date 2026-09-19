@@ -132,7 +132,11 @@ export function getFilteredOrders(){
     const dateOk = (!from || d >= from) && (!to || d <= to);
     const amtOk = o.total >= min && (max === null || o.total <= max);
     const paymentOk = !paymentMethod || o.paymentMethod === paymentMethod;
-    return kwOk && dateOk && amtOk && paymentOk;
+    const cur = getCurrentSession();
+    const curSessionId = cur ? cur.id : null;
+    const sessionOk = (from || to) ? true : (!curSessionId || o.sessionId === curSessionId);
+    return kwOk && dateOk && amtOk && paymentOk && sessionOk;
+
   }).sort((a,b)=> new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
 }
 
