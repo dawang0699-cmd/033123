@@ -134,8 +134,11 @@ export function getFilteredOrders(){
     const paymentOk = !paymentMethod || o.paymentMethod === paymentMethod;
     const cur = getCurrentSession();
     const curSessionId = cur ? cur.id : null;
-    const sessionOk = (from || to) ? true : (!curSessionId || o.sessionId === curSessionId);
+    // 待付款單一律顯示（不管掛在哪一班），其餘只顯示當班；有手動日期則不套班次過濾
+    const isPending = String(o.status || '').toLowerCase() === 'pending';
+    const sessionOk = (from || to) ? true : (isPending || !curSessionId || o.sessionId === curSessionId);
     return kwOk && dateOk && amtOk && paymentOk && sessionOk;
+
 
   }).sort((a,b)=> new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
 }
