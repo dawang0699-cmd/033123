@@ -142,9 +142,11 @@ export function getFilteredOrders(){
 
 // v20260613：「修改」改為「加到購物車」，原訂單保持原樣，要修改請另外按作廢
 function addOrderToCart(orderId){
+  alert('有進到 addOrderToCart，orderId=' + orderId);   // ← 暫時除錯
   if(!hasOpenSession()) return alert('🔒 尚未開始值班，請先到報表頁開班');
   const o = state.orders.find(x=>x.id===orderId);
-  if(!o) return;
+  if(!o) return alert('找不到訂單 o，id=' + orderId);   // ← 順便把這行的 return 也加上 alert
+
   if(o.status === 'void') return alert('此訂單已作廢，無法加到購物車');
 
   // B 選項：直接覆蓋購物車（不詢問）
@@ -163,8 +165,7 @@ function addOrderToCart(orderId){
   // 避免被 refreshAllViews 或重置邏輯蓋回預設值
   const wantedType = o.orderType || '內用';
   setTimeout(()=>{
-     alert('這張單 id：' + o.id + '\norderType 實際值：[' + o.orderType + ']');
-    const otSel = document.getElementById('orderType');
+        const otSel = document.getElementById('orderType');
     if(otSel){
       otSel.value = wantedType;
       if(!otSel.value) otSel.value = '內用';   // 保險：萬一該值不存在退回內用
