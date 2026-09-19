@@ -153,13 +153,27 @@ function addOrderToCart(orderId){
   // 不再設 editingOrderId — 結帳會產生新訂單，原訂單不變
   // v20260515-d：移除對已不存在的 #discountValue 欄位的設定
   // （新版折扣以「負金額品項」存在 cart 內，已隨上面 deepCopy(o.items) 一併帶過去）
-  document.getElementById('orderType').value = o.orderType || '內用';
   document.getElementById('tableNo').value = o.tableNo || '';
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.querySelector('.nav-btn[data-view="posView"]').classList.add('active');
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('posView').classList.add('active');
-  window.refreshAllViews();
+    window.refreshAllViews();
+  // 用 setTimeout 確保在所有同步重繪／切頁動作跑完「之後」才設分類，
+  // 避免被 refreshAllViews 或重置邏輯蓋回預設值
+  const wantedType = o.orderType || '內用';
+  setTimeout(()=>{
+    const otSel = document.getElementById('orderType');
+    if(otSel){
+      otSel.value = wantedType;
+      if(!otSel.value) otSel.value = '內用';   // 保險：萬一該值不存在退回內用
+      // 同步觸發預約區塊切換（若是預約單）
+      if(typeof window.posTogglePosReservationBlock === 'function'){
+        window.posTogglePosReservationBlock();
+      }
+    }
+  }, 0);
+
   alert('已將訂單 ' + (o.orderNo || '') + ' 的品項加到購物車。\n\n⚠️ 此為「重新建單」流程，原訂單仍存在；如需取代，請另外作廢原訂單。');
 }
 
