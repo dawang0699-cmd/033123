@@ -163,6 +163,7 @@ function addOrderToCart(orderId){
   // 避免被 refreshAllViews 或重置邏輯蓋回預設值
   const wantedType = o.orderType || '內用';
   setTimeout(()=>{
+     alert('這張單 id：' + o.id + '\norderType 實際值：[' + o.orderType + ']');
     const otSel = document.getElementById('orderType');
     if(otSel){
       otSel.value = wantedType;
