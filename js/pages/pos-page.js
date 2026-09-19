@@ -919,10 +919,11 @@ const selections = flattenSelections(product);
       document.getElementById('checkoutBtn').click();
     };
   }
-  if(document.getElementById('clearCartBtnModal')){
+   if(document.getElementById('clearCartBtnModal')){
     document.getElementById('clearCartBtnModal').onclick = ()=>{
       state.cart = [];
       state.editingOrderId = null;
+      resetOrderTypeFields();
       renderCart();
     };
   }
@@ -932,9 +933,11 @@ const selections = flattenSelections(product);
       if(!confirm('確定要清空購物車？')) return;
       state.cart = [];
       state.editingOrderId = null;
+      resetOrderTypeFields();
       renderCart();
     };
   }
+
     document.getElementById('discountAmountBtn').onclick = ()=>{
     openNumPad({
       title: '折扣金額',
