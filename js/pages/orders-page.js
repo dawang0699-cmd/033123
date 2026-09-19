@@ -229,17 +229,17 @@ function voidOrder(orderId){
     // 記錄原始狀態，方便日後追溯//
       const nowIso = new Date().toISOString();
     state.orders.forEach(x=>{
-      if(x.orderNo === o.orderNo && x.status !== 'void' && x.status !== 'completed'){
-        x.statusBeforeVoid = x.status || '';
-        x.status = 'void';
-        x.voidedAt = nowIso;
-        x.sessionId = currentSession ? currentSession.id : x.sessionId;
-        x.voidedReason = reason;
-        x.voidedBy = staffId;
-        x.updatedAt = nowIso;
-        x.sessionId = currentSession ? currentSession.id : x.sessionId; // 作廢歸到執行作廢的當前班次
-      }
-    });
+  if(x.orderNo === o.orderNo && x.status !== 'void' && x.status !== 'completed'){
+    x.statusBeforeVoid = x.status || '';
+    x.status = 'void';
+    x.voidedAt = nowIso;
+    x.voidedReason = reason;
+    x.voidedBy = staffId;
+    x.sessionId = currentSession ? currentSession.id : x.sessionId;  
+    x.updatedAt = nowIso;
+  }
+});
+
 
     if(o.statusBeforeVoid === 'pending' && Number(o.pointsUsed||0) > 0){
       try{
@@ -295,15 +295,17 @@ async function batchVoidOrders(orderIds){
       if(o) targetNos.add(o.orderNo);
     });
     state.orders.forEach(x=>{
-      if(targetNos.has(x.orderNo) && x.status !== 'void' && x.status !== 'completed'){
-        x.statusBeforeVoid = x.status || '';
-        x.status = 'void';
-        x.voidedAt = nowIso;
-        x.voidedReason = reason;
-        x.voidedBy = staffId;
-        x.updatedAt = nowIso;
-      }
-    });
+  if(targetNos.has(x.orderNo) && x.status !== 'void' && x.status !== 'completed'){
+    x.statusBeforeVoid = x.status || '';
+    x.status = 'void';
+    x.voidedAt = nowIso;
+    x.voidedReason = reason;
+    x.voidedBy = staffId;
+    x.sessionId = currentSession ? currentSession.id : x.sessionId;  
+    x.updatedAt = nowIso;
+  }
+});
+
 
     // 退點（本班待付款且有折抵點數的）
     for(const id of orderIds){
