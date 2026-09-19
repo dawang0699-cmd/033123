@@ -142,34 +142,51 @@ export function getFilteredOrders(){
 
 // v20260613：「修改」改為「加到購物車」，原訂單保持原樣，要修改請另外按作廢
 function addOrderToCart(orderId){
-  alert('有進到 addOrderToCart，orderId=' + orderId);   // ← 暫時除錯
   if(!hasOpenSession()) return alert('🔒 尚未開始值班，請先到報表頁開班');
   const o = state.orders.find(x=>x.id===orderId);
-  if(!o) return alert('找不到訂單 o，id=' + orderId);   // ← 順便把這行的 return 也加上 alert
-
+  if(!o) return;
   if(o.status === 'void') return alert('此訂單已作廢，無法加到購物車');
 
   // B 選項：直接覆蓋購物車（不詢問）
   state.cart = deepCopy(o.items);
 
-  // 不再設 editingOrderId — 結帳會產生新訂單，原訂單不變
-  // v20260515-d：移除對已不存在的 #discountValue 欄位的設定
-  // （新版折扣以「負金額品項」存在 cart 內，已隨上面 deepCopy(o.items) 一併帶過去）
   document.getElementById('tableNo').value = o.tableNo || '';
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.querySelector('.nav-btn[data-view="posView"]').classList.add('active');
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('posView').classList.add('active');
-    window.refreshAllViews();
-  // 用 setTimeout 確保在所有同步重繪／切頁動作跑完「之後」才設分類，
-  // 避免被 refreshAllViews 或重置邏輯蓋回預設值
-  const wantedType = o.orderType || '內用';
+  window.refreshAllViews();
+
+  // 線上單的分類可能是「線上點餐-外帶」「線上點餐-預約」這種複合值，
+  // POS 的 select 沒有這種 option，要對應回單純選項
+  const rawType = String(o.orderType || '');
   setTimeout(()=>{
-        const otSel = document.getElementById('orderType');
+    const otSel = document.getElementById('orderType');
     if(otSel){
+      let wantedType = '內用';
+      if(rawType.includes('預約'))      wantedType = '預約';
+      else if(rawType.includes('外帶')) wantedType = '外帶';
+      else if(rawType.includes('桌號')) wantedType = '桌號';
+      else if(rawType.includes('內用')) wantedType = '內用';
+      else if(rawType.includes('線上')) wantedType = '線上點餐';
+
       otSel.value = wantedType;
-      if(!otSel.value) otSel.value = '內用';   // 保險：萬一該值不存在退回內用
-      // 同步觸發預約區塊切換（若是預約單）
+      if(!otSel.value) otSel.value = '內用';
+
+      // 預約單：回填預約時段並顯示欄位
+      if(wantedType === '預約' && o.reservationAt){
+        const slotSel = document.getElementById('posReservationSlot');
+        if(slotSel){
+          if(![...slotSel.options].some(op => op.value === o.reservationAt)){
+            const opt = document.createElement('option');
+            opt.value = o.reservationAt;
+            opt.textContent = o.reservationAt.replace('T', ' ');
+            slotSel.appendChild(opt);
+          }
+          slotSel.value = o.reservationAt;
+          slotSel.style.display = '';
+        }
+      }
       if(typeof window.posTogglePosReservationBlock === 'function'){
         window.posTogglePosReservationBlock();
       }
@@ -178,6 +195,7 @@ function addOrderToCart(orderId){
 
   alert('已將訂單 ' + (o.orderNo || '') + ' 的品項加到購物車。\n\n⚠️ 此為「重新建單」流程，原訂單仍存在；如需取代，請另外作廢原訂單。');
 }
+
 
 
 // ── 作廢訂單（取代刪除）──
