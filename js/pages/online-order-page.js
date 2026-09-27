@@ -80,7 +80,7 @@ function showOnlineToast(message){
 function getStoreName(){
   // 線上點餐抬頭：讀 POS「即時接單設定 → 線上點餐頁 → 店名」(onlineStoreTitle)，
   // 未設定時退回顯示店代碼，避免空白
-  return state.settings?.'花蓮和平店'.realtimeOrder?.onlineStoreTitle || onlineState.'花蓮和平店'.storeCode || '線上點餐';
+  return state.settings?onlineStoreTitle.realtimeOrder?. || onlineState.storeCode || '線上點餐';
 }
 
 
